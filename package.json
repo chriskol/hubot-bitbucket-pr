@@ -1,6 +1,6 @@
 {
   "name": "hubot-bitbucket-pr",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Holler whenever anything happens around a Bitbucket pull request",
   "main": "./src/bitbucket-pr",
   "scripts": {
@@ -22,9 +22,9 @@
     "sinon-chai": "*",
     "sinon": "*"
   },
-  "repository" : {
-    "type" : "git",
-    "url" : "https://github.com/hubot-scripts/hubot-bitbucket-pr"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hubot-scripts/hubot-bitbucket-pr"
   },
   "bugs": {
     "url": "https://github.com/hubot-scripts/hubot-bitbucket-pr/issues"

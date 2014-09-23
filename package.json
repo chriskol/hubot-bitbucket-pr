@@ -24,7 +24,10 @@
   },
   "repository" : {
     "type" : "git",
-    "url" : "https://github.com/tshedor/hubot-bitbucket-pr.git"
+    "url" : "https://github.com/hubot-scripts/hubot-bitbucket-pr"
+  },
+  "bugs": {
+    "url": "https://github.com/hubot-scripts/hubot-bitbucket-pr/issues"
   },
   "author": "Tim Shedor <tshedor@gmail.com>",
   "license": "MIT"

@@ -112,7 +112,7 @@ module.exports = (robot) ->
       # Approved
       if data.hasOwnProperty('pullrequest_approve')
         resp = data.pullrequest_approve
-        encourage_array = [':thumbsup', 'That was a nice thing you did.', 'Boomtown', 'BOOM', 'Finally.', 'And another request bites the dust.']
+        encourage_array = [':thumbsup:', 'That was a nice thing you did.', 'Boomtown', 'BOOM', 'Finally.', 'And another request bites the dust.']
         encourage_me = encourage_array[Math.floor(Math.random()*encourage_array.length)];
         content =
           text: "Pull Request Approved"

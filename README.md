@@ -30,6 +30,20 @@ Set up a Bitbucket Pull Request hook by checking all boxes and setting the URL t
 A default room can be set with `HUBOT_BITBUCKET_PULLREQUEST_ROOM`. If this is not set, a room param is required in the URL:
 `...bitbucket-pr?name={your_repo_name}&room={your_room_id}`
 
+A list of announce events can be set with `HUBOT_BITBUCKET_PULLREQUEST_ANNOUNCE`.
+This comma-separated list sets what events hubot will share in the designated room.
+Possible options are:
+
+* created
+* updated
+* declined
+* merged
+* comment_created
+* approve
+* unapprove
+
+If left blank, hubot will announce everything.
+
 ## Commands
 
 This is only a notifier, nothing more.

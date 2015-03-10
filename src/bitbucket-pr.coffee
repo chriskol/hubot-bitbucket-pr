@@ -23,6 +23,15 @@ module.exports = (robot) ->
 
     query = querystring.parse(url.parse(req.url).query)
 
+    # Determine what actions to announce
+    announce_options = []
+    if process.env.HUBOT_BITBUCKET_PULLREQUEST_ANNOUNCE
+      announce_options = process.env.HUBOT_BITBUCKET_PULLREQUEST_ANNOUNCE.replace(/[^a-z\,]+/, '').split(',')
+
+    # default back to everything if no options set
+    announce_options = ['created', 'updated', 'declined', 'merged', 'comment_created', 'approve', 'unapprove'] if announce_options.length == 0
+
+
     # Fallback to default Pull request room
     room = if query.room then query.room else process.env.HUBOT_BITBUCKET_PULLREQUEST_ROOM
     repo_name = query.name
@@ -42,7 +51,7 @@ module.exports = (robot) ->
           room: room
 
       # Created
-      if data.hasOwnProperty('pullrequest_created')
+      if data.hasOwnProperty('pullrequest_created') && ('created' in announce_options)
         resp = data.pullrequest_created
 
         if resp.reviewers.length > 0
@@ -72,7 +81,7 @@ module.exports = (robot) ->
           ]
 
       # Comment added
-      if data.hasOwnProperty('pullrequest_comment_created')
+      if data.hasOwnProperty('pullrequest_comment_created') && ('comment_created' in announce_options)
         resp = data.pullrequest_comment_created
 
         content =
@@ -95,22 +104,22 @@ module.exports = (robot) ->
           ]
 
       # Declined
-      if data.hasOwnProperty('pullrequest_declined')
+      if data.hasOwnProperty('pullrequest_declined') && ('declined' in announce_options)
         resp = data.pullrequest_declined
         content = branch_action(resp, 'Declined', red, repo_name)
 
       # Merged
-      if data.hasOwnProperty('pullrequest_merged')
+      if data.hasOwnProperty('pullrequest_merged') && ('merged' in announce_options)
         resp = data.pullrequest_merged
         content = branch_action(resp, 'Merged', green, repo_name)
 
       # Updated
-      if data.hasOwnProperty('pullrequest_updated')
+      if data.hasOwnProperty('pullrequest_updated') && ('updated' in announce_options)
         resp = data.pullrequest_updated
         content = branch_action(resp, 'Updated', blue, repo_name)
 
       # Approved
-      if data.hasOwnProperty('pullrequest_approve')
+      if data.hasOwnProperty('pullrequest_approve') && ('approve' in announce_options)
         resp = data.pullrequest_approve
         encourage_array = [':thumbsup', 'That was a nice thing you did.', 'Boomtown', 'BOOM', 'Finally.', 'And another request bites the dust.']
         encourage_me = encourage_array[Math.floor(Math.random()*encourage_array.length)];
@@ -129,7 +138,7 @@ module.exports = (robot) ->
           ]
 
       # Unapproved
-      if data.hasOwnProperty('pullrequest_unapprove')
+      if data.hasOwnProperty('pullrequest_unapprove') && ('unapprove' in announce_options)
         resp = data.pullrequest_unapprove
         content =
           text: "Pull Request Unapproved"
@@ -152,7 +161,7 @@ module.exports = (robot) ->
     else
 
       # PR created
-      if data.hasOwnProperty('pullrequest_created')
+      if data.hasOwnProperty('pullrequest_created') && ('created' in announce_options)
         resp = data.pullrequest_created
         if resp.reviewers.length > 0
           reviewers = ''
@@ -162,7 +171,7 @@ module.exports = (robot) ->
           reviewers = ' no one in particular'
 
       # Comment created
-      if data.hasOwnProperty('pullrequest_comment_created')
+      if data.hasOwnProperty('pullrequest_comment_created') && ('comment_created' in announce_options)
         resp = data.pullrequest_comment_created
         msg = "#{resp.user.display_name} *added a comment* on `#{repo_name}`: \"#{resp.content.raw}\" "
         msg += "\n#{resp.links.html.href}"
@@ -171,23 +180,23 @@ module.exports = (robot) ->
         msg += "\n#{resp.links.html.href}"
 
       # Declined
-      if data.hasOwnProperty('pullrequest_declined')
+      if data.hasOwnProperty('pullrequest_declined') && ('declined' in announce_options)
         resp = data.pullrequest_declined
         msg = branch_action(resp, 'declined', 'thwarting the attempted merge of',  repo_name)
 
       # Merged
-      if data.hasOwnProperty('pullrequest_merged')
+      if data.hasOwnProperty('pullrequest_merged') && ('merged' in announce_options)
         resp = data.pullrequest_merged
         msg = branch_action(resp, 'merged', 'joining in sweet harmony', repo_name)
 
       # Updated
-      if data.hasOwnProperty('pullrequest_updated')
+      if data.hasOwnProperty('pullrequest_updated') && ('updated' in announce_options)
         resp = data.pullrequest_updated
         msg = branch_action(resp, 'updated', 'clarifying why it is necessary to merge', repo_name)
         msg += "\n #{resp.destination.repository.links.html.href}"
 
       # Approved
-      if data.hasOwnProperty('pullrequest_approve')
+      if data.hasOwnProperty('pullrequest_approve') && ('approve' in announce_options)
         resp = data.pullrequest_approve
         msg = "A pull request on `#{repo_name}` has been approved by #{resp.user.display_name}"
         encourage_array = [':thumbsup', 'That was a nice thing you did.', 'Boomtown', 'BOOM', 'Finally.', 'And another request bites the dust.']
@@ -195,7 +204,7 @@ module.exports = (robot) ->
         msg += "\n #{encourage_me}"
 
       # Unapproved
-      if data.hasOwnProperty('pullrequest_unapprove')
+      if data.hasOwnProperty('pullrequest_unapprove') && ('unapprove' in announce_options)
         resp = data.pullrequest_unapprove
         msg = "A pull request on `#{repo_name}` has been unapproved by #{resp.user.display_name}"
 

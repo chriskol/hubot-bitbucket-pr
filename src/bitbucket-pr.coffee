@@ -44,6 +44,8 @@ module.exports = (robot) ->
       green = '#48CE78'
       blue = '#286EA6'
       red = '#E5283E'
+      purple = '#AA82E5'
+      orange = '#F1A56F'
 
       msg =
         message:
@@ -59,23 +61,23 @@ module.exports = (robot) ->
           for reviewer in resp.reviewers
             reviewers += " #{reviewer.display_name}"
         else
-          reviewers = 'To no one in particular'
+          reviewers = ' no one in particular'
 
         content =
-          text: "New Request"
-          fallback: "Yo#{reviewers}, #{resp.author.display_name} just *created* the pull request \"#{resp.title}\" for `#{resp.destination.branch.name}` on `#{repo_name}`."
+          text: "#{resp.author.display_name} created a new request"
+          fallback: "Yo#{reviewers}, #{resp.author.display_name} just *created* the pull request \"#{resp.title}\" for `#{resp.destination.branch.name}` on `#{repo_name}`.\n#{resp.links.html.href}"
           pretext: reviewers
-          color: green
+          color: blue
           mrkdwn_in: ["text", "title", "fallback", "fields"]
           fields: [
             {
-              title: resp.author.display_name
+              title: repo_name
               value: resp.title
               short: true
             }
             {
-              title: repo_name
-              value: "For #{resp.destination.branch.name}\n#{resp.links.html.href}"
+              title: "Merge to #{resp.destination.branch.name}"
+              value: "#{resp.links.html.href}\nRequesting review from#{reviewers}"
               short: true
             }
           ]
@@ -85,14 +87,14 @@ module.exports = (robot) ->
         resp = data.pullrequest_comment_created
 
         content =
-          text: "New Comment"
-          fallback: "#{resp.user.display_name} *added a comment* on `#{repo_name}`: \"#{resp.content.raw}\" \n\n#{resp.links.html.href}"
+          text: ''
+          fallback: "#{resp.user.display_name} *added a comment* on `#{repo_name}`:\n\"#{resp.content.raw}\" \n\n#{resp.links.html.href}"
           pretext: ''
-          color: blue
+          color: orange
           mrkdwn_in: ["text", "title", "fallback", "fields"]
           fields: [
             {
-              title: resp.user.display_name
+              title: "#{resp.user.display_name} commented"
               value: resp.content.raw
               short: true
             }
@@ -116,7 +118,7 @@ module.exports = (robot) ->
       # Updated
       if data.hasOwnProperty('pullrequest_updated') && ('updated' in announce_options)
         resp = data.pullrequest_updated
-        content = branch_action(resp, 'Updated', blue, repo_name)
+        content = branch_action(resp, 'Updated', purple, repo_name)
 
       # Approved
       if data.hasOwnProperty('pullrequest_approve') && ('approve' in announce_options)
@@ -124,7 +126,7 @@ module.exports = (robot) ->
         encourage_array = [':thumbsup:', 'That was a nice thing you did.', 'Boomtown', 'BOOM', 'Finally.', 'And another request bites the dust.']
         encourage_me = encourage_array[Math.floor(Math.random()*encourage_array.length)];
         content =
-          text: "Pull Request Approved"
+          text: ''
           fallback: "A pull request on `#{repo_name}` has been approved by #{resp.user.display_name}\n#{encourage_me}"
           pretext: encourage_me
           color: green
@@ -132,7 +134,7 @@ module.exports = (robot) ->
           fields: [
             {
               title: repo_name
-              value: "Approved by #{resp.user.display_name}"
+              value: "Pull request approved by #{resp.user.display_name}"
               short: false
             }
           ]
@@ -176,8 +178,7 @@ module.exports = (robot) ->
         msg = "#{resp.user.display_name} *added a comment* on `#{repo_name}`: \"#{resp.content.raw}\" "
         msg += "\n#{resp.links.html.href}"
 
-        msg = "Yo#{reviewers}, #{resp.author.display_name} just *created* the pull request \"#{resp.title}\" for `#{resp.destination.branch.name}` on `#{repo_name}`."
-        msg += "\n#{resp.links.html.href}"
+        msg = "Yo#{reviewers}, #{resp.author.display_name} just *created* the pull request \"#{resp.title}\" for `#{resp.destination.branch.name}` on `#{repo_name}`.\n#{resp.links.html.href}"
 
       # Declined
       if data.hasOwnProperty('pullrequest_declined') && ('declined' in announce_options)
@@ -199,7 +200,7 @@ module.exports = (robot) ->
       if data.hasOwnProperty('pullrequest_approve') && ('approve' in announce_options)
         resp = data.pullrequest_approve
         msg = "A pull request on `#{repo_name}` has been approved by #{resp.user.display_name}"
-        encourage_array = [':thumbsup', 'That was a nice thing you did.', 'Boomtown', 'BOOM', 'Finally.', 'And another request bites the dust.']
+        encourage_array = [':thumbsup:', 'That was a nice thing you did.', 'Boomtown', 'BOOM', 'Finally.', 'And another request bites the dust.']
         encourage_me = encourage_array[Math.floor(Math.random()*encourage_array.length)];
         msg += "\n #{encourage_me}"
 
@@ -222,20 +223,16 @@ module.exports = (robot) ->
       fields = []
       fields.push
         title: resp.author.display_name
-        value: resp.reason
-        short: false
-      fields.push
-        title: "Repo"
-        value: repo_name
+        value: "#{action_name} \"#{resp.title}\" #{resp.reason}"
         short: true
       fields.push
-        title: "Branch"
-        value: "From #{resp.source.branch.name}\nTo #{resp.destination.branch.name}"
+        title: repo_name
+        value: resp.source.branch.name
         short: true
 
       payload =
-        text: "Pull Request \"#{resp.title}\" #{action_name}"
-        fallback: "#{resp.author.display_name} *#{action_name}* pull request \"#{resp.title},\" to #{action_name} `#{resp.source.branch.name}` and `#{resp.destination.branch.name}` into a `#{repo_name}` super branch"
+        text: ''
+        fallback: "#{resp.author.display_name} *#{action_name}* pull request \"#{resp.title}\"."
         pretext: ''
         color: color
         mrkdwn_in: ["text", "title", "fallback", "fields"]

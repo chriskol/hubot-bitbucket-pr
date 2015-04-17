@@ -57,15 +57,13 @@ module.exports = (robot) ->
         resp = data.pullrequest_created
 
         if resp.reviewers.length > 0
-          reviewers = ''
-          for reviewer in resp.reviewers
-            reviewers += " #{reviewer.display_name}"
+          reviewers = (resp.reviewers.map (r) -> r.display_name).join(", ")
         else
-          reviewers = ' no one in particular'
+          reviewers = 'no one in particular'
 
         content =
           text: "#{resp.author.display_name} created a new request"
-          fallback: "Yo#{reviewers}, #{resp.author.display_name} just *created* the pull request \"#{resp.title}\" for `#{resp.destination.branch.name}` on `#{repo_name}`.\n#{resp.links.html.href}"
+          fallback: "Yo #{reviewers}: #{resp.author.display_name} just *created* the pull request \"#{resp.title}\" for `#{resp.destination.branch.name}` on `#{repo_name}`.\n#{resp.links.html.href}"
           pretext: reviewers
           color: blue
           mrkdwn_in: ["text", "title", "fallback", "fields"]
@@ -166,19 +164,16 @@ module.exports = (robot) ->
       if data.hasOwnProperty('pullrequest_created') && ('created' in announce_options)
         resp = data.pullrequest_created
         if resp.reviewers.length > 0
-          reviewers = ''
-          for reviewer in resp.reviewers
-            reviewers += " #{reviewer.display_name}"
+          reviewers = (resp.reviewers.map (r) -> r.display_name).join(", ")
         else
-          reviewers = ' no one in particular'
+          reviewers = 'no one in particular'
+        msg = "Yo #{reviewers}: #{resp.author.display_name} just *created* the pull request \"#{resp.title}\" for `#{resp.destination.branch.name}` on `#{repo_name}`.\n#{resp.links.html.href}"
 
       # Comment created
       if data.hasOwnProperty('pullrequest_comment_created') && ('comment_created' in announce_options)
         resp = data.pullrequest_comment_created
         msg = "#{resp.user.display_name} *added a comment* on `#{repo_name}`: \"#{resp.content.raw}\" "
         msg += "\n#{resp.links.html.href}"
-
-        msg = "Yo#{reviewers}, #{resp.author.display_name} just *created* the pull request \"#{resp.title}\" for `#{resp.destination.branch.name}` on `#{repo_name}`.\n#{resp.links.html.href}"
 
       # Declined
       if data.hasOwnProperty('pullrequest_declined') && ('declined' in announce_options)

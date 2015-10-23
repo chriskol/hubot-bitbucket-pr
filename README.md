@@ -48,4 +48,4 @@ This is only a notifier, nothing more.
 
 ## Notes
 
-`v0.3 >=` instructed the Pull Request URL to set to `...bitbucket-pr?name={your_repo_name}`. Bitbucket's Webhook 2.0 now includes the repo name in the API response; `v0.4 <=` removes this requirement as a non-breaking change.
+`v0.3 >=` required the Pull Request URL be set to `...bitbucket-pr?name={your_repo_name}`. Bitbucket's Webhook 2.0 now includes the repo name in the API response; `v0.4 <=` removes this requirement as a non-breaking change.

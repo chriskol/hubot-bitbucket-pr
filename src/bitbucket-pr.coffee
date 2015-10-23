@@ -7,10 +7,10 @@
 #
 # Configuration:
 #   Set up a Bitbucket Pull Request hook with the URL
-#   {your_hubot_base_url}/hubot/bitbucket-pr?name={your_repo_name}. Check all boxes on prompt.
+#   {your_hubot_base_url}/hubot/bitbucket-pr. Check all boxes on prompt.
 #   A default room can be set with HUBOT_BITBUCKET_PULLREQUEST_ROOM.
 #   If this is not set, a room param is required:
-#   ...bitbucket-pr?name={your_repo_name}&room={your_room_id}
+#   ...bitbucket-pr?room={your_room_id}
 #
 # Author:
 #   tshedor
@@ -20,24 +20,34 @@ querystring = require('querystring')
 
 module.exports = (robot) ->
   robot.router.post '/hubot/bitbucket-pr', (req, res) ->
-
     query = querystring.parse(url.parse(req.url).query)
 
-    # Determine what actions to announce
-    announce_options = []
+    # Set default actions to announce
+    announce_options = ['created', 'updated', 'declined', 'merged', 'comment_created', 'approve', 'unapprove']
+
+    # Replace announce options if set in the environment
     if process.env.HUBOT_BITBUCKET_PULLREQUEST_ANNOUNCE
       announce_options = process.env.HUBOT_BITBUCKET_PULLREQUEST_ANNOUNCE.replace(/[^a-z\,]+/, '').split(',')
 
-    # default back to everything if no options set
-    announce_options = ['created', 'updated', 'declined', 'merged', 'comment_created', 'approve', 'unapprove'] if announce_options.length == 0
-
-
     # Fallback to default Pull request room
     room = if query.room then query.room else process.env.HUBOT_BITBUCKET_PULLREQUEST_ROOM
-    repo_name = query.name
 
-    data = req.body
+    resp = req.body
+
+    # Really don't understand why this isn't in the response body
+    # https://confluence.atlassian.com/bitbucket/event-payloads-740262817.html#EventPayloads-HTTPHeaders
+    type = req.headers['x-event-key']
+
     msg = ''
+
+    cached_vars = {
+      actor: resp.actor.display_name
+      title: resp.pullrequest.title
+      source_branch: resp.pullrequest.source.branch.name
+      destination_branch: resp.pullrequest.destination.branch.name
+      repo_name: resp.repository.name
+      pr_link: resp.pullrequest.links.html.href
+    }
 
     # Slack special formatting
     if robot.adapterName is 'slack'
@@ -53,104 +63,101 @@ module.exports = (robot) ->
           room: room
 
       # Created
-      if data.hasOwnProperty('pullrequest_created') && ('created' in announce_options)
-        resp = data.pullrequest_created
-
-        if resp.reviewers.length > 0
-          reviewers = (resp.reviewers.map (r) -> r.display_name).join(", ")
-        else
-          reviewers = 'no one in particular'
-
+      if type is 'pullrequest:created' && ('created' in announce_options)
+        reviewers = get_reviewers(resp)
         content =
-          text: "#{resp.author.display_name} created a new request"
-          fallback: "Yo #{reviewers}: #{resp.author.display_name} just *created* the pull request \"#{resp.title}\" for `#{resp.destination.branch.name}` on `#{repo_name}`.\n#{resp.links.html.href}"
-          pretext: reviewers
-          color: blue
+          text: "New Request from #{cached_vars.actor}"
+          fallback: "Yo#{reviewers}, #{cached_vars.actor} just *created* the pull request \"#{cached_vars.title}\" for `#{cached_vars.source_branch}` on `#{cached_vars.repo_name}`."
+          pretext: ''
+          color: green
           mrkdwn_in: ["text", "title", "fallback", "fields"]
           fields: [
             {
-              title: repo_name
-              value: resp.title
+              title: cached_vars.title
+              value: "Requesting review from#{reviewers}"
               short: true
             }
             {
-              title: "Merge to #{resp.destination.branch.name}"
-              value: "#{resp.links.html.href}\nRequesting review from#{reviewers}"
+              title: cached_vars.repo_name
+              value: "Merge to #{cached_vars.destination_branch}\n#{cached_vars.pr_link}"
               short: true
             }
           ]
 
       # Comment added
-      if data.hasOwnProperty('pullrequest_comment_created') && ('comment_created' in announce_options)
-        resp = data.pullrequest_comment_created
-
+      if type is 'pullrequest:comment_created' && ('comment_created' in announce_options)
         content =
           text: ''
-          fallback: "#{resp.user.display_name} *added a comment* on `#{repo_name}`:\n\"#{resp.content.raw}\" \n\n#{resp.links.html.href}"
+          fallback: "#{cached_vars.actor} *added a comment* on `#{cached_vars.repo_name}`: \"#{resp.comment.content.raw}\" \n\n#{resp.comment.links.html.href}"
           pretext: ''
           color: orange
           mrkdwn_in: ["text", "title", "fallback", "fields"]
           fields: [
             {
-              title: "#{resp.user.display_name} commented"
-              value: resp.content.raw
+              title: "#{cached_vars.actor} commented"
+              value: resp.comment.content.raw
               short: true
             }
             {
-              title: repo_name
-              value: resp.links.html.href
+              title: "#{cached_vars.repo_name} (#{cached_vars.source_branch})"
+              value: resp.comment.links.html.href
               short: true
             }
           ]
 
       # Declined
-      if data.hasOwnProperty('pullrequest_declined') && ('declined' in announce_options)
-        resp = data.pullrequest_declined
-        content = branch_action(resp, 'Declined', red, repo_name)
+      if type is 'pullrequest:rejected' && ('declined' in announce_options)
+        content = branch_action(resp, 'Declined', cached_vars, red)
 
       # Merged
-      if data.hasOwnProperty('pullrequest_merged') && ('merged' in announce_options)
-        resp = data.pullrequest_merged
-        content = branch_action(resp, 'Merged', green, repo_name)
+      if type is 'pullrequest:fulfilled' && ('merged' in announce_options)
+        content = branch_action(resp, 'Merged', cached_vars, green)
 
       # Updated
-      if data.hasOwnProperty('pullrequest_updated') && ('updated' in announce_options)
-        resp = data.pullrequest_updated
-        content = branch_action(resp, 'Updated', purple, repo_name)
+      if type is 'pullrequest:updated' && ('updated' in announce_options)
+        content = branch_action(resp, 'Updated', cached_vars, purple)
 
       # Approved
-      if data.hasOwnProperty('pullrequest_approve') && ('approve' in announce_options)
-        resp = data.pullrequest_approve
+      if type is 'pullrequest:approved' && ('approve' in announce_options)
         encourage_array = [':thumbsup:', 'That was a nice thing you did.', 'Boomtown', 'BOOM', 'Finally.', 'And another request bites the dust.']
         encourage_me = encourage_array[Math.floor(Math.random()*encourage_array.length)];
         content =
-          text: ''
-          fallback: "A pull request on `#{repo_name}` has been approved by #{resp.user.display_name}\n#{encourage_me}"
+          text: "Pull Request Approved"
+          fallback: "A pull request on `#{cached_vars.repo_name}` has been approved by #{cached_vars.actor}\n#{encourage_me}"
           pretext: encourage_me
           color: green
           mrkdwn_in: ["text", "title", "fallback", "fields"]
           fields: [
             {
-              title: repo_name
-              value: "Pull request approved by #{resp.user.display_name}"
-              short: false
+              title: cached_vars.title
+              value: "Approved by #{cached_vars.actor}"
+              short: true
+            }
+            {
+              title: cached_vars.repo_name
+              value: cached_vars.pr_link
+              short: true
             }
           ]
 
       # Unapproved
-      if data.hasOwnProperty('pullrequest_unapprove') && ('unapprove' in announce_options)
-        resp = data.pullrequest_unapprove
+      if type is 'pullrequest:unapproved' && ('unapprove' in announce_options)
         content =
           text: "Pull Request Unapproved"
-          fallback: "A pull request on `#{repo_name}` has been unapproved by #{resp.user.display_name}"
-          pretext: 'Darn it.'
+          fallback: "A pull request on `#{cached_vars.repo_name}` has been unapproved by #{cached_vars.actor}"
+          pretext: 'Foiled!'
           color: red
           mrkdwn_in: ["text", "title", "fallback", "fields"]
           fields: [
             {
-              title: repo_name
-              value: "Unapproved by #{resp.user.display_name}"
-              short: false
+              title: cached_vars.actor
+              value: cached_vars.title
+              short: true
+            }
+            {
+              title: cached_vars.repo_name
+              value: cached_vars.pr_link
+              short: true
             }
           ]
 
@@ -161,48 +168,43 @@ module.exports = (robot) ->
     else
 
       # PR created
-      if data.hasOwnProperty('pullrequest_created') && ('created' in announce_options)
-        resp = data.pullrequest_created
-        if resp.reviewers.length > 0
-          reviewers = (resp.reviewers.map (r) -> r.display_name).join(", ")
-        else
-          reviewers = 'no one in particular'
-        msg = "Yo #{reviewers}: #{resp.author.display_name} just *created* the pull request \"#{resp.title}\" for `#{resp.destination.branch.name}` on `#{repo_name}`.\n#{resp.links.html.href}"
+      if type is 'pullrequest:created' && ('created' in announce_options)
+        reviewers = get_reviewers(resp)
+
+        msg = "Yo#{reviewers}, #{cached_vars.actor} just *created* the pull request \"#{cached_vars.title}\" for `#{cached_vars.source_branch}` on `#{cached_vars.repo_name}`."
+        msg += "\n#{cached_vars.pr_link}"
 
       # Comment created
-      if data.hasOwnProperty('pullrequest_comment_created') && ('comment_created' in announce_options)
-        resp = data.pullrequest_comment_created
-        msg = "#{resp.user.display_name} *added a comment* on `#{repo_name}`: \"#{resp.content.raw}\" "
-        msg += "\n#{resp.links.html.href}"
+      if type is 'pullrequest:comment_created' && ('comment_created' in announce_options)
+        msg = "#{cached_vars.actor} *added a comment* on `#{cached_vars.repo_name}`: \"#{resp.comment.content.raw}\" "
+        msg += "\n#{resp.comment.links.html.href}"
 
       # Declined
-      if data.hasOwnProperty('pullrequest_declined') && ('declined' in announce_options)
-        resp = data.pullrequest_declined
-        msg = branch_action(resp, 'declined', 'thwarting the attempted merge of',  repo_name)
+      if type is 'pullrequest:rejected' && ('declined' in announce_options)
+        msg = branch_action(resp, 'declined', 'thwarting the attempted merge of', cached_vars)
+        msg += "\n#{cached_vars.pr_link}"
 
       # Merged
-      if data.hasOwnProperty('pullrequest_merged') && ('merged' in announce_options)
-        resp = data.pullrequest_merged
-        msg = branch_action(resp, 'merged', 'joining in sweet harmony', repo_name)
+      if type is 'pullrequest:fulfilled' && ('merged' in announce_options)
+        msg = branch_action(resp, 'merged', 'joining in sweet harmony', cached_vars)
 
       # Updated
-      if data.hasOwnProperty('pullrequest_updated') && ('updated' in announce_options)
-        resp = data.pullrequest_updated
-        msg = branch_action(resp, 'updated', 'clarifying why it is necessary to merge', repo_name)
-        msg += "\n #{resp.destination.repository.links.html.href}"
+      if type is 'pullrequest:updated' && ('updated' in announce_options)
+        msg = branch_action(resp, 'updated', 'clarifying why it is necessary to merge', cached_vars)
+        msg += "\n#{cached_vars.pr_link}"
 
       # Approved
-      if data.hasOwnProperty('pullrequest_approve') && ('approve' in announce_options)
-        resp = data.pullrequest_approve
-        msg = "A pull request on `#{repo_name}` has been approved by #{resp.user.display_name}"
+      if type is 'pullrequest:approved' && ('approve' in announce_options)
+        msg = "A pull request on `#{cached_vars.repo_name}` has been approved by #{cached_vars.actor}"
         encourage_array = [':thumbsup:', 'That was a nice thing you did.', 'Boomtown', 'BOOM', 'Finally.', 'And another request bites the dust.']
         encourage_me = encourage_array[Math.floor(Math.random()*encourage_array.length)];
-        msg += "\n #{encourage_me}"
+        msg += "\n#{encourage_me}"
+        msg += "\n#{cached_vars.pr_link}"
 
       # Unapproved
-      if data.hasOwnProperty('pullrequest_unapprove') && ('unapprove' in announce_options)
-        resp = data.pullrequest_unapprove
-        msg = "A pull request on `#{repo_name}` has been unapproved by #{resp.user.display_name}"
+      if type is 'pullrequest:unapproved' && ('unapprove' in announce_options)
+        msg = "A pull request on `#{cached_vars.repo_name}` has been unapproved by #{cached_vars.actor}"
+        msg += "\n#{cached_vars.pr_link}"
 
       robot.messageRoom room, msg
 
@@ -210,24 +212,35 @@ module.exports = (robot) ->
     res.writeHead 204, { 'Content-Length': 0 }
     res.end()
 
+
+  get_reviewers = (resp) ->
+    if resp.pullrequest.reviewers.length > 0
+      reviewers = ''
+      for reviewer in resp.pullrequest.reviewers
+        reviewers += " #{reviewer.display_name}"
+    else
+      reviewers = ' no one in particular'
+
+    return reviewers
+
   # Consolidate redundant formatting with branch_action func
 
   if robot.adapterName is 'slack'
 
-    branch_action = (resp, action_name, color, repo_name) ->
+    branch_action = (resp, action_name, cached_vars, color) ->
       fields = []
       fields.push
-        title: resp.author.display_name
-        value: "#{action_name} \"#{resp.title}\" #{resp.reason}"
+        title: cached_vars.title
+        value: resp.pullrequest.reason
         short: true
       fields.push
-        title: repo_name
-        value: resp.source.branch.name
+        title: "#{cached_vars.repo_name} (#{cached_vars.source_branch})"
+        value: cached_vars.pr_link
         short: true
 
       payload =
-        text: ''
-        fallback: "#{resp.author.display_name} *#{action_name}* pull request \"#{resp.title}\"."
+        text: "Pull Request #{action_name} by #{cached_vars.actor}"
+        fallback: "#{cached_vars.actor} *#{action_name}* pull request \"#{cached_vars.title}\"."
         pretext: ''
         color: color
         mrkdwn_in: ["text", "title", "fallback", "fields"]
@@ -237,8 +250,8 @@ module.exports = (robot) ->
 
   else
 
-    branch_action = (resp, action_name, action_desc, repo_name) ->
-      msg = "#{resp.author.display_name} *#{action_name}* pull request \"#{resp.title},\" #{action_desc} `#{resp.source.branch.name}` and `#{resp.destination.branch.name}` into a `#{repo_name}` super branch"
-      msg += if resp.reason isnt '' then ":\n\"#{resp.reason}\"" else "."
+    branch_action = (resp, action_name, action_desc, cached_vars) ->
+      msg = "#{cached_vars.actor} *#{action_name}* pull request \"#{cached_vars.title},\" #{action_desc} `#{cached_vars.source_branch}` and `#{cached_vars.destination_branch}` into a `#{cached_vars.repo_name}` super branch"
+      msg += if resp.reason isnt '' then ":\n\"#{resp.pullrequest.reason}\"" else "."
 
       return msg

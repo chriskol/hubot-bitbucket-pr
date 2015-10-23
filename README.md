@@ -25,10 +25,12 @@ Then add *hubot-bitbucket-pr* to your external-scripts.json:
 ## Configuration
 
 Set up a Bitbucket Pull Request hook by checking all boxes and setting the URL to:
-`{your_hubot_base_url}/hubot/bitbucket-pr?name={your_repo_name}`
+`{your_hubot_base_url}/hubot/bitbucket-pr`
+
+**Note**: Version 0.3.0 > had this hook set to `...bitbucket-pr?name={your_repo_name}`. Bitbucket's Webhook 2.0 now includes the repo name in the API response, so this param is no longer necessary. Version 0.4.0 < is backwards compatible.
 
 A default room can be set with `HUBOT_BITBUCKET_PULLREQUEST_ROOM`. If this is not set, a room param is required in the URL:
-`...bitbucket-pr?name={your_repo_name}&room={your_room_id}`
+`...bitbucket-pr?room={your_room_id}`
 
 A list of announce events can be set with `HUBOT_BITBUCKET_PULLREQUEST_ANNOUNCE`.
 This comma-separated list sets what events hubot will share in the designated room.

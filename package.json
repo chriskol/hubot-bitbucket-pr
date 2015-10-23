@@ -1,6 +1,6 @@
 {
   "name": "hubot-bitbucket-pr",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Holler whenever anything happens around a Bitbucket pull request",
   "main": "./src/bitbucket-pr",
   "scripts": {

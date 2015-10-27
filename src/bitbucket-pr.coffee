@@ -69,7 +69,7 @@ module.exports = (robot) ->
           text: "New Request from #{cached_vars.actor}"
           fallback: "Yo#{reviewers}, #{cached_vars.actor} just *created* the pull request \"#{cached_vars.title}\" for `#{cached_vars.source_branch}` on `#{cached_vars.repo_name}`."
           pretext: ''
-          color: green
+          color: blue
           mrkdwn_in: ["text", "title", "fallback", "fields"]
           fields: [
             {

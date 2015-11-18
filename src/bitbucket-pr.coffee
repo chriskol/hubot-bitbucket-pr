@@ -34,6 +34,91 @@ ENCOURAGEMENTS = [
 encourageMe = ->
   ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)]
 
+class PullRequestEvent
+  constructor: (@robot, @resp, @type) ->
+    @actor = @resp.actor.display_name
+    @title = @resp.pullrequest.title
+    @source_branch = @resp.pullrequest.source.branch.name
+    @destination_branch = @resp.pullrequest.destination.branch.name
+    @repo_name = @resp.repository.name
+    @pr_link = @resp.pullrequest.links.html.href
+    @reason = if @resp.reason isnt '' then ":\n\"#{@resp.pullrequest.reason}\"" else "."
+
+  getReviewers: ->
+    if @resp.pullrequest.reviewers.length > 0
+      reviewer_names = for reviewer in @resp.pullrequest.reviewers
+        "#{reviewer.display_name}"
+      reviewers_names.join(", ")
+    else
+      'no one in particular'
+
+  branchAction: (action_name, action_desc) ->
+    "#{@actor} *#{action_name}* pull request \"#{@title},\" #{action_desc}
+    `#{@source_branch}` and `#{@destination_branch}` into a `#{@repo_name}`
+    super branch#{@reason}"
+
+  getMessage: ->
+    msg = switch
+      # PR created
+      when type is 'pullrequest:created' && 'created' in ANNOUNCE_OPTIONS
+        @robot.logger.debug "Pull request created"
+        @pullRequestCreated()
+
+      # Comment created
+      when type is 'pullrequest:comment_created' && 'comment_created' in ANNOUNCE_OPTIONS
+        @robot.logger.debug "Pull request comment created"
+        @pullRequestCommentCreated()
+
+      # Declined
+      when type is 'pullrequest:rejected' && 'declined' in ANNOUNCE_OPTIONS
+        @robot.logger.debug "Pull request rejected"
+        @pullRequestDeclined()
+
+      # Merged
+      when type is 'pullrequest:fulfilled' && 'merged' in ANNOUNCE_OPTIONS
+        @robot.logger.debug "Pull request merged"
+        @pullRequestMerged()
+
+      # Updated
+      when type is 'pullrequest:updated' && 'updated' in ANNOUNCE_OPTIONS
+        @robot.logger.debug "Pull request updated"
+        @pullRequestUpdated()
+
+      # Approved
+      when type is 'pullrequest:approved' && 'approve' in ANNOUNCE_OPTIONS
+        @robot.logger.debug "Pull request approved"
+        @pullRequestApproved()
+
+      # Unapproved
+      when type is 'pullrequest:unapproved' && 'unapprove' in ANNOUNCE_OPTIONS
+        @robot.logger.debug "Pull request unapproved"
+        @pullRequestUnapproved()
+
+  pullRequestCreated: ->
+    "Yo #{@getReviewers()}, #{@actor} just *created* the pull request
+    \"#{@title}\" for `#{@source_branch}` on `#{@repo_name}`.
+    \n#{cached_vars.pr_link}"
+
+  pullRequestCommentCreated: ->
+    "#{@actor} *added a comment* on `#{@repo_name}`:
+    \"#{@resp.comment.content.raw}\"\n#{@resp.comment.links.html.href}"
+
+  pullRequestDeclined: ->
+    branch_action('declined', 'thwarting the attempted merge of') + "\n#{@pr_link}"
+
+  pullRequestMerged: ->
+    branch_action('merged', 'joining in sweet harmony')
+
+  pullRequestUpdated: ->
+    branch_action('updated', 'clarifying why it is necessary to merge') + "\n#{@pr_link}"
+
+  pullRequestApproved: ->
+    "A pull request on `#{@repo_name}` has been approved by #{@actor}
+    \n#{encourageMe()}\n#{@pr_link}"
+
+  pullRequestUnapproved: ->
+    "A pull request on `#{@repo_name}` has been unapproved by #{@actor}\n#{@pr_link}"
+
 module.exports = (robot) ->
   robot.router.post '/hubot/bitbucket-pr', (req, res) ->
     resp = req.body
@@ -170,44 +255,8 @@ module.exports = (robot) ->
 
     # For hubot adapters that are not Slack
     else
-
-      # PR created
-      if type is 'pullrequest:created' && ('created' in ANNOUNCE_OPTIONS)
-        reviewers = get_reviewers(resp)
-
-        msg = "Yo#{reviewers}, #{cached_vars.actor} just *created* the pull request \"#{cached_vars.title}\" for `#{cached_vars.source_branch}` on `#{cached_vars.repo_name}`."
-        msg += "\n#{cached_vars.pr_link}"
-
-      # Comment created
-      if type is 'pullrequest:comment_created' && ('comment_created' in ANNOUNCE_OPTIONS)
-        msg = "#{cached_vars.actor} *added a comment* on `#{cached_vars.repo_name}`: \"#{resp.comment.content.raw}\" "
-        msg += "\n#{resp.comment.links.html.href}"
-
-      # Declined
-      if type is 'pullrequest:rejected' && ('declined' in ANNOUNCE_OPTIONS)
-        msg = branch_action(resp, 'declined', 'thwarting the attempted merge of', cached_vars)
-        msg += "\n#{cached_vars.pr_link}"
-
-      # Merged
-      if type is 'pullrequest:fulfilled' && ('merged' in ANNOUNCE_OPTIONS)
-        msg = branch_action(resp, 'merged', 'joining in sweet harmony', cached_vars)
-
-      # Updated
-      if type is 'pullrequest:updated' && ('updated' in ANNOUNCE_OPTIONS)
-        msg = branch_action(resp, 'updated', 'clarifying why it is necessary to merge', cached_vars)
-        msg += "\n#{cached_vars.pr_link}"
-
-      # Approved
-      if type is 'pullrequest:approved' && ('approve' in ANNOUNCE_OPTIONS)
-        msg = "A pull request on `#{cached_vars.repo_name}` has been approved by #{cached_vars.actor}"
-        msg += "\n#{encourageMe()}"
-        msg += "\n#{cached_vars.pr_link}"
-
-      # Unapproved
-      if type is 'pullrequest:unapproved' && ('unapprove' in ANNOUNCE_OPTIONS)
-        msg = "A pull request on `#{cached_vars.repo_name}` has been unapproved by #{cached_vars.actor}"
-        msg += "\n#{cached_vars.pr_link}"
-
+      event = new PullRequestEvent(robot, resp, type)
+      msg = event.getMessage()
       robot.messageRoom room, msg
 
     # Close response
@@ -250,10 +299,3 @@ module.exports = (robot) ->
 
       return payload
 
-  else
-
-    branch_action = (resp, action_name, action_desc, cached_vars) ->
-      msg = "#{cached_vars.actor} *#{action_name}* pull request \"#{cached_vars.title},\" #{action_desc} `#{cached_vars.source_branch}` and `#{cached_vars.destination_branch}` into a `#{cached_vars.repo_name}` super branch"
-      msg += if resp.reason isnt '' then ":\n\"#{resp.pullrequest.reason}\"" else "."
-
-      return msg

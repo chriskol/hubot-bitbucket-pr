@@ -1,10 +1,6 @@
 # Description:
 #   Holler whenever anything happens around a Bitbucket pull request
 #
-# Dependencies:
-#   "url": ""
-#   "querystring": ""
-#
 # Configuration:
 #   Set up a Bitbucket Pull Request hook with the URL
 #   {your_hubot_base_url}/hubot/bitbucket-pr. Check all boxes on prompt.
@@ -15,12 +11,11 @@
 # Author:
 #   tshedor
 
-url = require('url')
-querystring = require('querystring')
+DEFAULT_ROOM = process.env.HUBOT_BITBUCKET_PULLREQUEST_ROOM
+
 
 module.exports = (robot) ->
   robot.router.post '/hubot/bitbucket-pr', (req, res) ->
-    query = querystring.parse(url.parse(req.url).query)
 
     # Set default actions to announce
     announce_options = ['created', 'updated', 'declined', 'merged', 'comment_created', 'approve', 'unapprove']
@@ -29,8 +24,6 @@ module.exports = (robot) ->
     if process.env.HUBOT_BITBUCKET_PULLREQUEST_ANNOUNCE
       announce_options = process.env.HUBOT_BITBUCKET_PULLREQUEST_ANNOUNCE.replace(/[^a-z\,]+/, '').split(',')
 
-    # Fallback to default Pull request room
-    room = if query.room then query.room else process.env.HUBOT_BITBUCKET_PULLREQUEST_ROOM
 
     resp = req.body
 
@@ -48,6 +41,8 @@ module.exports = (robot) ->
       repo_name: resp.repository.name
       pr_link: resp.pullrequest.links.html.href
     }
+    # Fallback to default Pull request room
+    room = req.query.room ? DEFAULT_ROOM
 
     # Slack special formatting
     if robot.adapterName is 'slack'

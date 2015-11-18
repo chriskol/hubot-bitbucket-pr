@@ -119,6 +119,130 @@ class PullRequestEvent
   pullRequestUnapproved: ->
     "A pull request on `#{@repo_name}` has been unapproved by #{@actor}\n#{@pr_link}"
 
+class SlackPullRequestEvent extends PullRequestEvent
+  GREEN: '#48CE78'
+  BLUE: '#286EA6'
+  RED: '#E5283E'
+  PURPLE: '#AA82E5'
+  ORANGE: '#F1A56F'
+
+  branchAction: (action_name, color) ->
+    fields = []
+    fields.push
+      title: @title
+      value: @resp.pullrequest.reason
+      short: true
+    fields.push
+      title: "#{@repo_name} (#{@source_branch})"
+      value: @pr_link
+      short: true
+
+    payload =
+      text: "Pull Request #{action_name} by #{@actor}"
+      fallback: "#{@actor} *#{action_name}* pull request \"#{@title}\"."
+      pretext: ''
+      color: color
+      mrkdwn_in: ["text", "title", "fallback", "fields"]
+      fields: fields
+
+  pullRequestCreated: ->
+    reviewers = @getReviewers()
+    content =
+      text: "New Request from #{@actor}"
+      fallback: "Yo #{reviewers}, #{@actor} just *created* the pull request
+                 \"#{@title}\" for `#{@source_branch}` on `#{@repo_name}`."
+      pretext: ''
+      color: @BLUE
+      mrkdwn_in: ["text", "title", "fallback", "fields"]
+      fields: [
+        {
+          title: @title
+          value: "Requesting review from #{reviewers}"
+          short: true
+        }
+        {
+          title: @repo_name
+          value: """
+            Merge to #{@destination_branch}
+            #{@pr_link}
+          """
+          short: true
+        }
+      ]
+
+  pullRequestCommentCreated: ->
+    content =
+      text: ''
+      fallback: "#{@actor} *added a comment* on `#{@repo_name}`:
+                 \"#{@resp.comment.content.raw}\"
+                 \n\n#{@resp.comment.links.html.href}"
+      pretext: ''
+      color: @ORANGE
+      mrkdwn_in: ["text", "title", "fallback", "fields"]
+      fields: [
+        {
+          title: "#{@actor} commented"
+          value: @resp.comment.content.raw
+          short: true
+        }
+        {
+          title: "#{@repo_name} (#{@source_branch})"
+          value: @resp.comment.links.html.href
+          short: true
+        }
+      ]
+
+  pullRequestDeclined: ->
+    content = branch_action('Declined', @RED)
+
+  pullRequestMerged: ->
+    content = branch_action('Merged', @GREEN)
+
+  pullRequestUpdated: ->
+    content = branch_action('Updated', @PURPLE)
+
+  pullRequestApproved: ->
+    content =
+      text: "Pull Request Approved"
+      fallback: "A pull request on `#{@repo_name}` has been
+                 approved by #{@actor}\n#{encourageMe()}"
+      pretext: encourageMe()
+      color: @GREEN
+      mrkdwn_in: ["text", "title", "fallback", "fields"]
+      fields: [
+        {
+          title: @title
+          value: "Approved by #{@actor}"
+          short: true
+        }
+        {
+          title: @repo_name
+          value: @pr_link
+          short: true
+        }
+      ]
+
+  pullRequestUnapproved: ->
+    content =
+      text: "Pull Request Unapproved"
+      fallback: "A pull request on `#{@repo_name}` has been
+                 unapproved by #{@actor}"
+      pretext: 'Foiled!'
+      color: @RED
+      mrkdwn_in: ["text", "title", "fallback", "fields"]
+      fields: [
+        {
+          title: @actor
+          value: @title
+          short: true
+        }
+        {
+          title: @repo_name
+          value: @pr_link
+          short: true
+        }
+      ]
+
 module.exports = (robot) ->
   robot.router.post '/hubot/bitbucket-pr', (req, res) ->
     resp = req.body
@@ -127,130 +251,19 @@ module.exports = (robot) ->
     # https://confluence.atlassian.com/bitbucket/event-payloads-740262817.html#EventPayloads-HTTPHeaders
     type = req.headers['x-event-key']
 
-    msg = ''
-
-    cached_vars = {
-      actor: resp.actor.display_name
-      title: resp.pullrequest.title
-      source_branch: resp.pullrequest.source.branch.name
-      destination_branch: resp.pullrequest.destination.branch.name
-      repo_name: resp.repository.name
-      pr_link: resp.pullrequest.links.html.href
-    }
     # Fallback to default Pull request room
     room = req.query.room ? DEFAULT_ROOM
 
     # Slack special formatting
     if robot.adapterName is 'slack'
-      green = '#48CE78'
-      blue = '#286EA6'
-      red = '#E5283E'
-      purple = '#AA82E5'
-      orange = '#F1A56F'
+      event = new SlackPullRequestEvent(robot, resp, type)
 
       msg =
         message:
           reply_to: room
           room: room
 
-      # Created
-      if type is 'pullrequest:created' && ('created' in ANNOUNCE_OPTIONS)
-        reviewers = get_reviewers(resp)
-        content =
-          text: "New Request from #{cached_vars.actor}"
-          fallback: "Yo#{reviewers}, #{cached_vars.actor} just *created* the pull request \"#{cached_vars.title}\" for `#{cached_vars.source_branch}` on `#{cached_vars.repo_name}`."
-          pretext: ''
-          color: blue
-          mrkdwn_in: ["text", "title", "fallback", "fields"]
-          fields: [
-            {
-              title: cached_vars.title
-              value: "Requesting review from#{reviewers}"
-              short: true
-            }
-            {
-              title: cached_vars.repo_name
-              value: "Merge to #{cached_vars.destination_branch}\n#{cached_vars.pr_link}"
-              short: true
-            }
-          ]
-
-      # Comment added
-      if type is 'pullrequest:comment_created' && ('comment_created' in ANNOUNCE_OPTIONS)
-        content =
-          text: ''
-          fallback: "#{cached_vars.actor} *added a comment* on `#{cached_vars.repo_name}`: \"#{resp.comment.content.raw}\" \n\n#{resp.comment.links.html.href}"
-          pretext: ''
-          color: orange
-          mrkdwn_in: ["text", "title", "fallback", "fields"]
-          fields: [
-            {
-              title: "#{cached_vars.actor} commented"
-              value: resp.comment.content.raw
-              short: true
-            }
-            {
-              title: "#{cached_vars.repo_name} (#{cached_vars.source_branch})"
-              value: resp.comment.links.html.href
-              short: true
-            }
-          ]
-
-      # Declined
-      if type is 'pullrequest:rejected' && ('declined' in ANNOUNCE_OPTIONS)
-        content = branch_action(resp, 'Declined', cached_vars, red)
-
-      # Merged
-      if type is 'pullrequest:fulfilled' && ('merged' in ANNOUNCE_OPTIONS)
-        content = branch_action(resp, 'Merged', cached_vars, green)
-
-      # Updated
-      if type is 'pullrequest:updated' && ('updated' in ANNOUNCE_OPTIONS)
-        content = branch_action(resp, 'Updated', cached_vars, purple)
-
-      # Approved
-      if type is 'pullrequest:approved' && ('approve' in ANNOUNCE_OPTIONS)
-        content =
-          text: "Pull Request Approved"
-          fallback: "A pull request on `#{cached_vars.repo_name}` has been approved by #{cached_vars.actor}\n#{encourageMe()}"
-          pretext: encourageMe()
-          color: green
-          mrkdwn_in: ["text", "title", "fallback", "fields"]
-          fields: [
-            {
-              title: cached_vars.title
-              value: "Approved by #{cached_vars.actor}"
-              short: true
-            }
-            {
-              title: cached_vars.repo_name
-              value: cached_vars.pr_link
-              short: true
-            }
-          ]
-
-      # Unapproved
-      if type is 'pullrequest:unapproved' && ('unapprove' in ANNOUNCE_OPTIONS)
-        content =
-          text: "Pull Request Unapproved"
-          fallback: "A pull request on `#{cached_vars.repo_name}` has been unapproved by #{cached_vars.actor}"
-          pretext: 'Foiled!'
-          color: red
-          mrkdwn_in: ["text", "title", "fallback", "fields"]
-          fields: [
-            {
-              title: cached_vars.actor
-              value: cached_vars.title
-              short: true
-            }
-            {
-              title: cached_vars.repo_name
-              value: cached_vars.pr_link
-              short: true
-            }
-          ]
-
-      msg.content = content
+      msg.content = event.getMessage()
       robot.emit 'slack-attachment', msg
 
     # For hubot adapters that are not Slack
@@ -262,40 +275,3 @@ module.exports = (robot) ->
     # Close response
     res.writeHead 204, { 'Content-Length': 0 }
     res.end()
-
-
-  get_reviewers = (resp) ->
-    if resp.pullrequest.reviewers.length > 0
-      reviewers = ''
-      for reviewer in resp.pullrequest.reviewers
-        reviewers += " #{reviewer.display_name}"
-    else
-      reviewers = ' no one in particular'
-
-    return reviewers
-
-  # Consolidate redundant formatting with branch_action func
-
-  if robot.adapterName is 'slack'
-
-    branch_action = (resp, action_name, cached_vars, color) ->
-      fields = []
-      fields.push
-        title: cached_vars.title
-        value: resp.pullrequest.reason
-        short: true
-      fields.push
-        title: "#{cached_vars.repo_name} (#{cached_vars.source_branch})"
-        value: cached_vars.pr_link
-        short: true
-
-      payload =
-        text: "Pull Request #{action_name} by #{cached_vars.actor}"
-        fallback: "#{cached_vars.actor} *#{action_name}* pull request \"#{cached_vars.title}\"."
-        pretext: ''
-        color: color
-        mrkdwn_in: ["text", "title", "fallback", "fields"]
-        fields: fields
-
-      return payload
-

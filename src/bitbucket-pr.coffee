@@ -13,18 +13,21 @@
 
 DEFAULT_ROOM = process.env.HUBOT_BITBUCKET_PULLREQUEST_ROOM
 
+# Set default actions to announce
+DEFAULT_ANNOUNCE_OPTIONS = [
+  'created', 'updated', 'declined', 'merged',
+  'comment_created', 'approve', 'unapprove'
+]
+
+getEnvAnnounceOptions = ->
+  # Replace announce options if set in the environment
+  if process.env.HUBOT_BITBUCKET_PULLREQUEST_ANNOUNCE
+    process.env.HUBOT_BITBUCKET_PULLREQUEST_ANNOUNCE.replace(/[^a-z\,]+/, '').split(',')
+
+ANNOUNCE_OPTIONS = getEnvAnnounceOptions() ? DEFAULT_ANNOUNCE_OPTIONS
 
 module.exports = (robot) ->
   robot.router.post '/hubot/bitbucket-pr', (req, res) ->
-
-    # Set default actions to announce
-    announce_options = ['created', 'updated', 'declined', 'merged', 'comment_created', 'approve', 'unapprove']
-
-    # Replace announce options if set in the environment
-    if process.env.HUBOT_BITBUCKET_PULLREQUEST_ANNOUNCE
-      announce_options = process.env.HUBOT_BITBUCKET_PULLREQUEST_ANNOUNCE.replace(/[^a-z\,]+/, '').split(',')
-
-
     resp = req.body
 
     # Really don't understand why this isn't in the response body
@@ -58,7 +61,7 @@ module.exports = (robot) ->
           room: room
 
       # Created
-      if type is 'pullrequest:created' && ('created' in announce_options)
+      if type is 'pullrequest:created' && ('created' in ANNOUNCE_OPTIONS)
         reviewers = get_reviewers(resp)
         content =
           text: "New Request from #{cached_vars.actor}"
@@ -80,7 +83,7 @@ module.exports = (robot) ->
           ]
 
       # Comment added
-      if type is 'pullrequest:comment_created' && ('comment_created' in announce_options)
+      if type is 'pullrequest:comment_created' && ('comment_created' in ANNOUNCE_OPTIONS)
         content =
           text: ''
           fallback: "#{cached_vars.actor} *added a comment* on `#{cached_vars.repo_name}`: \"#{resp.comment.content.raw}\" \n\n#{resp.comment.links.html.href}"
@@ -101,19 +104,19 @@ module.exports = (robot) ->
           ]
 
       # Declined
-      if type is 'pullrequest:rejected' && ('declined' in announce_options)
+      if type is 'pullrequest:rejected' && ('declined' in ANNOUNCE_OPTIONS)
         content = branch_action(resp, 'Declined', cached_vars, red)
 
       # Merged
-      if type is 'pullrequest:fulfilled' && ('merged' in announce_options)
+      if type is 'pullrequest:fulfilled' && ('merged' in ANNOUNCE_OPTIONS)
         content = branch_action(resp, 'Merged', cached_vars, green)
 
       # Updated
-      if type is 'pullrequest:updated' && ('updated' in announce_options)
+      if type is 'pullrequest:updated' && ('updated' in ANNOUNCE_OPTIONS)
         content = branch_action(resp, 'Updated', cached_vars, purple)
 
       # Approved
-      if type is 'pullrequest:approved' && ('approve' in announce_options)
+      if type is 'pullrequest:approved' && ('approve' in ANNOUNCE_OPTIONS)
         encourage_array = [':thumbsup:', 'That was a nice thing you did.', 'Boomtown', 'BOOM', 'Finally.', 'And another request bites the dust.']
         encourage_me = encourage_array[Math.floor(Math.random()*encourage_array.length)];
         content =
@@ -136,7 +139,7 @@ module.exports = (robot) ->
           ]
 
       # Unapproved
-      if type is 'pullrequest:unapproved' && ('unapprove' in announce_options)
+      if type is 'pullrequest:unapproved' && ('unapprove' in ANNOUNCE_OPTIONS)
         content =
           text: "Pull Request Unapproved"
           fallback: "A pull request on `#{cached_vars.repo_name}` has been unapproved by #{cached_vars.actor}"
@@ -163,33 +166,33 @@ module.exports = (robot) ->
     else
 
       # PR created
-      if type is 'pullrequest:created' && ('created' in announce_options)
+      if type is 'pullrequest:created' && ('created' in ANNOUNCE_OPTIONS)
         reviewers = get_reviewers(resp)
 
         msg = "Yo#{reviewers}, #{cached_vars.actor} just *created* the pull request \"#{cached_vars.title}\" for `#{cached_vars.source_branch}` on `#{cached_vars.repo_name}`."
         msg += "\n#{cached_vars.pr_link}"
 
       # Comment created
-      if type is 'pullrequest:comment_created' && ('comment_created' in announce_options)
+      if type is 'pullrequest:comment_created' && ('comment_created' in ANNOUNCE_OPTIONS)
         msg = "#{cached_vars.actor} *added a comment* on `#{cached_vars.repo_name}`: \"#{resp.comment.content.raw}\" "
         msg += "\n#{resp.comment.links.html.href}"
 
       # Declined
-      if type is 'pullrequest:rejected' && ('declined' in announce_options)
+      if type is 'pullrequest:rejected' && ('declined' in ANNOUNCE_OPTIONS)
         msg = branch_action(resp, 'declined', 'thwarting the attempted merge of', cached_vars)
         msg += "\n#{cached_vars.pr_link}"
 
       # Merged
-      if type is 'pullrequest:fulfilled' && ('merged' in announce_options)
+      if type is 'pullrequest:fulfilled' && ('merged' in ANNOUNCE_OPTIONS)
         msg = branch_action(resp, 'merged', 'joining in sweet harmony', cached_vars)
 
       # Updated
-      if type is 'pullrequest:updated' && ('updated' in announce_options)
+      if type is 'pullrequest:updated' && ('updated' in ANNOUNCE_OPTIONS)
         msg = branch_action(resp, 'updated', 'clarifying why it is necessary to merge', cached_vars)
         msg += "\n#{cached_vars.pr_link}"
 
       # Approved
-      if type is 'pullrequest:approved' && ('approve' in announce_options)
+      if type is 'pullrequest:approved' && ('approve' in ANNOUNCE_OPTIONS)
         msg = "A pull request on `#{cached_vars.repo_name}` has been approved by #{cached_vars.actor}"
         encourage_array = [':thumbsup:', 'That was a nice thing you did.', 'Boomtown', 'BOOM', 'Finally.', 'And another request bites the dust.']
         encourage_me = encourage_array[Math.floor(Math.random()*encourage_array.length)];
@@ -197,7 +200,7 @@ module.exports = (robot) ->
         msg += "\n#{cached_vars.pr_link}"
 
       # Unapproved
-      if type is 'pullrequest:unapproved' && ('unapprove' in announce_options)
+      if type is 'pullrequest:unapproved' && ('unapprove' in ANNOUNCE_OPTIONS)
         msg = "A pull request on `#{cached_vars.repo_name}` has been unapproved by #{cached_vars.actor}"
         msg += "\n#{cached_vars.pr_link}"
 

@@ -26,6 +26,14 @@ getEnvAnnounceOptions = ->
 
 ANNOUNCE_OPTIONS = getEnvAnnounceOptions() ? DEFAULT_ANNOUNCE_OPTIONS
 
+ENCOURAGEMENTS = [
+  ':thumbsup:', 'That was a nice thing you did.', 'Boomtown',
+  'BOOM', 'Finally.', 'And another request bites the dust.'
+]
+
+encourageMe = ->
+  ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)]
+
 module.exports = (robot) ->
   robot.router.post '/hubot/bitbucket-pr', (req, res) ->
     resp = req.body
@@ -117,12 +125,10 @@ module.exports = (robot) ->
 
       # Approved
       if type is 'pullrequest:approved' && ('approve' in ANNOUNCE_OPTIONS)
-        encourage_array = [':thumbsup:', 'That was a nice thing you did.', 'Boomtown', 'BOOM', 'Finally.', 'And another request bites the dust.']
-        encourage_me = encourage_array[Math.floor(Math.random()*encourage_array.length)];
         content =
           text: "Pull Request Approved"
-          fallback: "A pull request on `#{cached_vars.repo_name}` has been approved by #{cached_vars.actor}\n#{encourage_me}"
-          pretext: encourage_me
+          fallback: "A pull request on `#{cached_vars.repo_name}` has been approved by #{cached_vars.actor}\n#{encourageMe()}"
+          pretext: encourageMe()
           color: green
           mrkdwn_in: ["text", "title", "fallback", "fields"]
           fields: [
@@ -194,9 +200,7 @@ module.exports = (robot) ->
       # Approved
       if type is 'pullrequest:approved' && ('approve' in ANNOUNCE_OPTIONS)
         msg = "A pull request on `#{cached_vars.repo_name}` has been approved by #{cached_vars.actor}"
-        encourage_array = [':thumbsup:', 'That was a nice thing you did.', 'Boomtown', 'BOOM', 'Finally.', 'And another request bites the dust.']
-        encourage_me = encourage_array[Math.floor(Math.random()*encourage_array.length)];
-        msg += "\n#{encourage_me}"
+        msg += "\n#{encourageMe()}"
         msg += "\n#{cached_vars.pr_link}"
 
       # Unapproved

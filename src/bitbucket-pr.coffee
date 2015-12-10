@@ -52,7 +52,7 @@ class PullRequestEvent
     else
       'no one in particular'
 
-  branchAction: (action_name, action_desc) ->
+  @branchAction: (action_name, action_desc) ->
     "#{@actor} *#{action_name}* pull request \"#{@title},\" #{action_desc}
     `#{@source_branch}` and `#{@destination_branch}` into a `#{@repo_name}`
     super branch#{@reason}"
@@ -104,13 +104,13 @@ class PullRequestEvent
     \"#{@resp.comment.content.raw}\"\n#{@resp.comment.links.html.href}"
 
   pullRequestDeclined: ->
-    branch_action('declined', 'thwarting the attempted merge of') + "\n#{@pr_link}"
+    @branchAction('declined', 'thwarting the attempted merge of') + "\n#{@pr_link}"
 
   pullRequestMerged: ->
-    branch_action('merged', 'joining in sweet harmony')
+    @branchAction('merged', 'joining in sweet harmony')
 
   pullRequestUpdated: ->
-    branch_action('updated', 'clarifying why it is necessary to merge') + "\n#{@pr_link}"
+    @branchAction('updated', 'clarifying why it is necessary to merge') + "\n#{@pr_link}"
 
   pullRequestApproved: ->
     "A pull request on `#{@repo_name}` has been approved by #{@actor}
@@ -126,7 +126,7 @@ class SlackPullRequestEvent extends PullRequestEvent
   PURPLE: '#AA82E5'
   ORANGE: '#F1A56F'
 
-  branchAction: (action_name, color) ->
+  @branchAction: (action_name, color) ->
     fields = []
     fields.push
       title: @title
@@ -193,13 +193,13 @@ class SlackPullRequestEvent extends PullRequestEvent
       ]
 
   pullRequestDeclined: ->
-    content = branch_action('Declined', @RED)
+    content = @branchAction('Declined', @RED)
 
   pullRequestMerged: ->
-    content = branch_action('Merged', @GREEN)
+    content = @branchAction('Merged', @GREEN)
 
   pullRequestUpdated: ->
-    content = branch_action('Updated', @PURPLE)
+    content = @branchAction('Updated', @PURPLE)
 
   pullRequestApproved: ->
     content =

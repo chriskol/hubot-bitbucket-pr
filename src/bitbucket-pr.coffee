@@ -52,7 +52,7 @@ class PullRequestEvent
     else
       'no one in particular'
 
-  @branchAction: (action_name, action_desc) ->
+  branchAction: (action_name, action_desc) ->
     "#{@actor} *#{action_name}* pull request \"#{@title},\" #{action_desc}
     `#{@source_branch}` and `#{@destination_branch}` into a `#{@repo_name}`
     super branch#{@reason}"
@@ -126,7 +126,7 @@ class SlackPullRequestEvent extends PullRequestEvent
   PURPLE: '#AA82E5'
   ORANGE: '#F1A56F'
 
-  @branchAction: (action_name, color) ->
+  branchAction: (action_name, color) ->
     fields = []
     fields.push
       title: @title

@@ -60,37 +60,37 @@ class PullRequestEvent
   getMessage: ->
     msg = switch
       # PR created
-      when type is 'pullrequest:created' && 'created' in ANNOUNCE_OPTIONS
+      when @type is 'pullrequest:created' && 'created' in ANNOUNCE_OPTIONS
         @robot.logger.debug "Pull request created"
         @pullRequestCreated()
 
       # Comment created
-      when type is 'pullrequest:comment_created' && 'comment_created' in ANNOUNCE_OPTIONS
+      when @type is 'pullrequest:comment_created' && 'comment_created' in ANNOUNCE_OPTIONS
         @robot.logger.debug "Pull request comment created"
         @pullRequestCommentCreated()
 
       # Declined
-      when type is 'pullrequest:rejected' && 'declined' in ANNOUNCE_OPTIONS
+      when @type is 'pullrequest:rejected' && 'declined' in ANNOUNCE_OPTIONS
         @robot.logger.debug "Pull request rejected"
         @pullRequestDeclined()
 
       # Merged
-      when type is 'pullrequest:fulfilled' && 'merged' in ANNOUNCE_OPTIONS
+      when @type is 'pullrequest:fulfilled' && 'merged' in ANNOUNCE_OPTIONS
         @robot.logger.debug "Pull request merged"
         @pullRequestMerged()
 
       # Updated
-      when type is 'pullrequest:updated' && 'updated' in ANNOUNCE_OPTIONS
+      when @type is 'pullrequest:updated' && 'updated' in ANNOUNCE_OPTIONS
         @robot.logger.debug "Pull request updated"
         @pullRequestUpdated()
 
       # Approved
-      when type is 'pullrequest:approved' && 'approve' in ANNOUNCE_OPTIONS
+      when @type is 'pullrequest:approved' && 'approve' in ANNOUNCE_OPTIONS
         @robot.logger.debug "Pull request approved"
         @pullRequestApproved()
 
       # Unapproved
-      when type is 'pullrequest:unapproved' && 'unapprove' in ANNOUNCE_OPTIONS
+      when @type is 'pullrequest:unapproved' && 'unapprove' in ANNOUNCE_OPTIONS
         @robot.logger.debug "Pull request unapproved"
         @pullRequestUnapproved()
 

@@ -14,17 +14,16 @@
 DEFAULT_ROOM = process.env.HUBOT_BITBUCKET_PULLREQUEST_ROOM
 
 # Set default actions to announce
-DEFAULT_ANNOUNCE_OPTIONS = [
-  'created', 'updated', 'declined', 'merged',
-  'comment_created', 'approve', 'unapprove'
-]
 
 getEnvAnnounceOptions = ->
   # Replace announce options if set in the environment
   if process.env.HUBOT_BITBUCKET_PULLREQUEST_ANNOUNCE
     process.env.HUBOT_BITBUCKET_PULLREQUEST_ANNOUNCE.replace(/[^a-z\,]+/, '').split(',')
+  # Fall back to default actions to announce
+  else
+    ['created', 'updated', 'declined', 'merged', 'comment_created', 'approve', 'unapprove']
 
-ANNOUNCE_OPTIONS = getEnvAnnounceOptions() ? DEFAULT_ANNOUNCE_OPTIONS
+ANNOUNCE_OPTIONS = getEnvAnnounceOptions()
 
 ENCOURAGEMENTS = [
   ':thumbsup:', 'That was a nice thing you did.', 'Boomtown',

@@ -13,8 +13,6 @@
 
 DEFAULT_ROOM = process.env.HUBOT_BITBUCKET_PULLREQUEST_ROOM
 
-# Set default actions to announce
-
 getEnvAnnounceOptions = ->
   # Replace announce options if set in the environment
   if process.env.HUBOT_BITBUCKET_PULLREQUEST_ANNOUNCE

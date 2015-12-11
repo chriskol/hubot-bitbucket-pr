@@ -57,7 +57,7 @@ class PullRequestEvent
     super branch#{@reason}"
 
   getMessage: ->
-    msg = switch
+    switch
       # PR created
       when @type is 'pullrequest:created' && 'created' in ANNOUNCE_OPTIONS
         @robot.logger.debug "Pull request created"
@@ -192,13 +192,13 @@ class SlackPullRequestEvent extends PullRequestEvent
       ]
 
   pullRequestDeclined: ->
-    content = @branchAction('Declined', @RED)
+    @branchAction('Declined', @RED)
 
   pullRequestMerged: ->
-    content = @branchAction('Merged', @GREEN)
+    @branchAction('Merged', @GREEN)
 
   pullRequestUpdated: ->
-    content = @branchAction('Updated', @PURPLE)
+    @branchAction('Updated', @PURPLE)
 
   pullRequestApproved: ->
     content =

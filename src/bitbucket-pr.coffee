@@ -39,7 +39,10 @@ class PullRequestEvent
     @destination_branch = @resp.pullrequest.destination.branch.name
     @repo_name = @resp.repository.name
     @pr_link = @resp.pullrequest.links.html.href
-    @reason = if @resp.reason isnt '' then ":\n\"#{@resp.pullrequest.reason}\"" else "."
+    @reason = "."
+    if @resp.reason isnt ''
+      if @resp.pullrequest.reason isnt ''
+        @reason = ":\n\"#{@resp.pullrequest.reason}\""
 
   getReviewers: ->
     if @resp.pullrequest.reviewers.length > 0

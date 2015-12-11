@@ -161,10 +161,7 @@ class SlackPullRequestEvent extends PullRequestEvent
         }
         {
           title: @repo_name
-          value: """
-            Merge to #{@destination_branch}
-            #{@pr_link}
-          """
+          value: "Merge to #{@destination_branch}\n#{@pr_link}"
           short: true
         }
       ]

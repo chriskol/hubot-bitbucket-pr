@@ -48,7 +48,7 @@ class PullRequestEvent
     if @resp.pullrequest.reviewers.length > 0
       reviewer_names = for reviewer in @resp.pullrequest.reviewers
         "#{reviewer.display_name}"
-      reviewers_names.join(", ")
+      reviewer_names.join(", ")
     else
       'no one in particular'
 

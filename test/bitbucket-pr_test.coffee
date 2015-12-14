@@ -7,8 +7,9 @@ Helper = require('hubot-test-helper')
 expect = require('chai').expect
 sinon = require('sinon')
 
-# contents = Coffee.compile( fs.readFileSync('./src/bitbucket-pr.coffee', 'utf8')+'' )
-# eval( contents )
+# Compile without the function wrapper so we can test the PullRequestEvent class
+contents = Coffee.compile( fs.readFileSync('./src/bitbucket-pr.coffee', 'utf8')+'', bare: true )
+eval( contents )
 
 # helper loads a specific script if it's a file
 helper = new Helper('../src/bitbucket-pr.coffee')
@@ -22,10 +23,8 @@ UPDATED_RESP = require('./support/updated.json')
 APPROVED_RESP = require('./support/approved.json')
 UNAPPROVED_RESP = require('./support/unapproved.json')
 
-pre = PullRequestEvent('', APPROVED_RESP, 'pullrequest:created')
-
 describe 'PullRequestEvent', ->
-  pre = null
+  pre = new PullRequestEvent('', CREATED_RESP, 'pullrequest:created')
 
   context 'pull request event is created', ->
     expect( pre.actor ).to.eql 'Emma'
@@ -33,8 +32,8 @@ describe 'PullRequestEvent', ->
     expect( pre.source_branch ).to.eql 'branch2'
     expect( pre.destination_branch ).to.eql 'master'
     expect( pre.repo_name ).to.eql 'repo_name'
-    expect( pre.pr_link ).to.eql 'https://api.bitbucket.org/emmap1'
-    expect( pre.reason ).to.eql ':"reason for declining the PR (if applicable)"'
+    expect( pre.pr_link ).to.eql 'https://api.bitbucket.org/pullrequest_id'
+    expect( pre.reason ).to.eql ':\n"reason for declining the PR (if applicable)"'
 
   context '.getReviewers()', ->
     reviewers = pre.getReviewers()
@@ -43,7 +42,7 @@ describe 'PullRequestEvent', ->
   context '.branchAction()', ->
     action = pre.branchAction('created', 'thwarting the attempted merge of')
 
-    expect( pre.branchAction ).to.eql 'Emma *created* pull request "Title of pull request," thwarting the attempted merge of `branch2` and `master` into a `repo_name` super branch:"reason for declining the PR (if applicable)"'
+    expect( action ).to.eql 'Emma *created* pull request "Title of pull request," thwarting the attempted merge of `branch2` and `master` into a `repo_name` super branch:\n"reason for declining the PR (if applicable)"'
 
 describe 'bitbucket-pr', ->
   room = null

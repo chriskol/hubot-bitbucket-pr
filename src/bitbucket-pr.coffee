@@ -162,7 +162,7 @@ class SlackPullRequestEvent extends PullRequestEvent
         }
         {
           title: @repo_name
-          value: "Merge to #{@destination_branch}\n#{@pr_link}"
+          value: "Merge #{@source_branch} to #{@destination_branch}\n<#{@pr_link}|View on Bitbucket>"
           short: true
         }
       ]
@@ -183,8 +183,8 @@ class SlackPullRequestEvent extends PullRequestEvent
           short: true
         }
         {
-          title: "#{@repo_name} (#{@source_branch})"
-          value: @resp.comment.links.html.href
+          title: "#{@repo_name} (<#{@pr_link}|#{@source_branch}>)"
+          value: "<#{@resp.comment.links.html.href}|Read on Bitbucket>"
           short: true
         }
       ]
@@ -214,7 +214,7 @@ class SlackPullRequestEvent extends PullRequestEvent
         }
         {
           title: @repo_name
-          value: @pr_link
+          value: "<#{@pr_link}|View on Bitbucket>"
           short: true
         }
       ]
@@ -235,7 +235,7 @@ class SlackPullRequestEvent extends PullRequestEvent
         }
         {
           title: @repo_name
-          value: @pr_link
+          value: "<#{@pr_link}|View on Bitbucket>"
           short: true
         }
       ]

@@ -97,7 +97,7 @@ class PullRequestEvent
   pullRequestCreated: ->
     "Yo #{@getReviewers()}, #{@actor} just *created* the pull request
     \"#{@title}\" for `#{@source_branch}` on `#{@repo_name}`.
-    \n#{cached_vars.pr_link}"
+    \n#{@pr_link}"
 
   pullRequestCommentCreated: ->
     "#{@actor} *added a comment* on `#{@repo_name}`:

@@ -97,7 +97,7 @@ class PullRequestEvent
   pullRequestCreated: ->
     "Yo #{@getReviewers()}, #{@actor} just *created* the pull request
     \"#{@title}\" for `#{@source_branch}` on `#{@repo_name}`.
-    \n#{cached_vars.pr_link}"
+    \n#{@pr_link}"
 
   pullRequestCommentCreated: ->
     "#{@actor} *added a comment* on `#{@repo_name}`:
@@ -134,7 +134,7 @@ class SlackPullRequestEvent extends PullRequestEvent
       short: true
     fields.push
       title: "#{@repo_name} (#{@source_branch})"
-      value: @pr_link
+      value: "<#{@pr_link}|View on Bitbucket>"
       short: true
 
     payload =
@@ -162,7 +162,7 @@ class SlackPullRequestEvent extends PullRequestEvent
         }
         {
           title: @repo_name
-          value: "Merge to #{@destination_branch}\n#{@pr_link}"
+          value: "Merge #{@source_branch} to #{@destination_branch}\n<#{@pr_link}|View on Bitbucket>"
           short: true
         }
       ]
@@ -184,7 +184,7 @@ class SlackPullRequestEvent extends PullRequestEvent
         }
         {
           title: "#{@repo_name} (#{@source_branch})"
-          value: @resp.comment.links.html.href
+          value: "<#{@resp.comment.links.html.href}|Read on Bitbucket>"
           short: true
         }
       ]
@@ -214,7 +214,7 @@ class SlackPullRequestEvent extends PullRequestEvent
         }
         {
           title: @repo_name
-          value: @pr_link
+          value: "<#{@pr_link}|View on Bitbucket>"
           short: true
         }
       ]
@@ -235,7 +235,7 @@ class SlackPullRequestEvent extends PullRequestEvent
         }
         {
           title: @repo_name
-          value: @pr_link
+          value: "<#{@pr_link}|View on Bitbucket>"
           short: true
         }
       ]

@@ -134,7 +134,7 @@ class SlackPullRequestEvent extends PullRequestEvent
       short: true
     fields.push
       title: "#{@repo_name} (#{@source_branch})"
-      value: @pr_link
+      value: "<#{@pr_link}|View on Bitbucket>"
       short: true
 
     payload =
@@ -183,7 +183,7 @@ class SlackPullRequestEvent extends PullRequestEvent
           short: true
         }
         {
-          title: "#{@repo_name} (<#{@pr_link}|#{@source_branch}>)"
+          title: "#{@repo_name} (#{@source_branch})"
           value: "<#{@resp.comment.links.html.href}|Read on Bitbucket>"
           short: true
         }

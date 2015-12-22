@@ -2,7 +2,7 @@
 
 Holler whenever anything happens around a Bitbucket pull request
 
-[![Build Status](https://travis-ci.org/tshedor/hubot-bitbucket-pr.png)](https://travis-ci.org/tshedor/hubot-bitbucket-pr)
+[![Build Status](https://travis-ci.org/hubot-scripts/hubot-bitbucket-pr.svg)](https://travis-ci.org/hubot-scripts/hubot-bitbucket-pr)
 
 ## Features
 

@@ -15,11 +15,13 @@ helper = new Helper('../src/bitbucket-pr.coffee')
 
 ROBOT = helper.createRoom().robot
 
+# https://confluence.atlassian.com/bitbucket/event-payloads-740262817.html
 CREATED_RESP = require('./support/created.json')
 COMMENT_RESP = require('./support/comment.json')
 MERGED_RESP = require('./support/merged.json')
 UPDATED_RESP = require('./support/updated.json')
 APPROVED_RESP = require('./support/approved.json')
+DECLINED_RESP = require('./support/declined.json')
 UNAPPROVED_RESP = require('./support/unapproved.json')
 
 # Mock robot for the logger.debug functions in getMessage
@@ -93,6 +95,45 @@ describe 'PullRequestEvent', ->
       message = pre.getMessage()
 
       expect( message ).to.eql 'Yo Emma, Hank, Emma just *created* the pull request "Title of pull request" for `branch2` on `repo_name`. \nhttps://api.bitbucket.org/pullrequest_id'
+
+describe 'SlackPullRequestEvent', ->
+  pre = null
+
+  beforeEach ->
+    pre = new SlackPullRequestEvent(MOCK_ROBOT, CREATED_RESP, 'pullrequest:created')
+
+  # Clear variable
+  afterEach ->
+    pre = null
+
+  describe '#branchAction()', ->
+    it 'should have a successful reply on create', ->
+      action = pre.branchAction('created', pre.GREEN)
+
+      expect( action.text ).to.eql 'Pull Request created by Emma'
+      expect( action.color ).to.eql pre.GREEN
+      expect( action.fields[0].title ).to.eql pre.title
+      expect( action.fields[1].value ).to.eql '<https://api.bitbucket.org/pullrequest_id|View on Bitbucket>'
+
+  describe '#pullRequestCreated()', ->
+    it 'should have a custom message', ->
+      action = pre.pullRequestCreated()
+
+      expect( action.text ).to.eql 'New Request from Emma'
+      expect( action.color ).to.eql pre.BLUE
+      expect( action.fields[0].title ).to.eql pre.title
+      expect( action.fields[1].value ).to.eql 'Merge branch2 to master\n<https://api.bitbucket.org/pullrequest_id|View on Bitbucket>'
+
+  describe '#pullRequestDeclined()', ->
+    it 'should use branchAction\'s response' , ->
+      pre = new SlackPullRequestEvent(MOCK_ROBOT, DECLINED_RESP, 'pullrequest:declined')
+      action = pre.pullRequestDeclined()
+
+      expect( action.text ).to.eql 'Pull Request Declined by Emma'
+      expect( action.color ).to.eql pre.RED
+      expect( action.fields[0].title ).to.eql pre.title
+      expect( action.fields[1].value ).to.eql '<https://api.bitbucket.org/pullrequest_id|View on Bitbucket>'
+
 
 describe 'bitbucket-pr', ->
   room = null

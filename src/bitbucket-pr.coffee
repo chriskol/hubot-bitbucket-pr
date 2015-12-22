@@ -127,23 +127,24 @@ class SlackPullRequestEvent extends PullRequestEvent
   ORANGE: '#F1A56F'
 
   branchAction: (action_name, color) ->
-    fields = []
-    fields.push
-      title: @title
-      value: @resp.pullrequest.reason
-      short: true
-    fields.push
-      title: "#{@repo_name} (#{@source_branch})"
-      value: "<#{@pr_link}|View on Bitbucket>"
-      short: true
-
-    payload =
+    content =
       text: "Pull Request #{action_name} by #{@actor}"
       fallback: "#{@actor} *#{action_name}* pull request \"#{@title}\"."
       pretext: ''
       color: color
       mrkdwn_in: ["text", "title", "fallback", "fields"]
-      fields: fields
+      fields: [
+        {
+          title: @title
+          value: @resp.pullrequest.reason
+          short: true
+        }
+        {
+          title: "#{@repo_name} (#{@source_branch})"
+          value: "<#{@pr_link}|View on Bitbucket>"
+          short: true
+        }
+      ]
 
   pullRequestCreated: ->
     reviewers = @getReviewers()

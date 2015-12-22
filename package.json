@@ -21,10 +21,7 @@
     "coffee-script": "^1.9.3",
     "coffeelint": "^1.9.4",
     "hubot-test-helper": "0.0.6",
-    "mocha": "^2.2.5",
-    "nock": "^2.3.0",
-    "sinon": "^1.14.1",
-    "ciara": "*"
+    "mocha": "^2.2.5"
   },
   "repository": {
     "type": "git",

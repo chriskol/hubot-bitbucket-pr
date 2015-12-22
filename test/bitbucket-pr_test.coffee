@@ -133,13 +133,3 @@ describe 'SlackPullRequestEvent', ->
       expect( action.color ).to.eql pre.RED
       expect( action.fields[0].title ).to.eql pre.title
       expect( action.fields[1].value ).to.eql '<https://api.bitbucket.org/pullrequest_id|View on Bitbucket>'
-
-
-describe 'bitbucket-pr', ->
-  room = null
-
-  beforeEach ->
-    room = helper.createRoom()
-
-  afterEach ->
-    room.destroy()

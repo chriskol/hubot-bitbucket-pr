@@ -19,43 +19,64 @@ getEnvAnnounceOptions = ->
     process.env.HUBOT_BITBUCKET_PULLREQUEST_ANNOUNCE.replace(/[^a-z\,]+/, '').split(',')
   # Fall back to default actions to announce
   else
-    ['created', 'updated', 'declined', 'merged', 'comment_created', 'approve', 'unapprove']
+    ['created', 'updated', 'declined', 'merged', 'comment_created', 'approve', 'unapprove', 'issue_created', 'issue_comment_created', 'issue_updated']
 
 ANNOUNCE_OPTIONS = getEnvAnnounceOptions()
 
-ENCOURAGEMENTS = [
-  ':thumbsup:', 'That was a nice thing you did.', 'Boomtown',
-  'BOOM', 'Finally.', 'And another request bites the dust.'
-]
-
 encourageMe = ->
-  ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)]
+  encouragements = [
+    ':thumbsup:', 'That was a nice thing you did.', 'Boomtown',
+    'BOOM', 'Finally.', 'And another request bites the dust.'
+  ]
+
+  encouragements[Math.floor(Math.random() * encouragements.length)]
+
+COLORS =
+  created: '#286EA6'
+  commented: '#F1A56F'
+  rejected: '#E5283E'
+  merged: '#48CE78'
+  updated: '#AA82E5'
+  approved: '#48CE78'
+  declined: '#E5283E'
+  unapproved: '#E5283E'
 
 class PullRequestEvent
   constructor: (@robot, @resp, @type) ->
     @actor = @resp.actor.display_name
-    @title = @resp.pullrequest.title
-    @source_branch = @resp.pullrequest.source.branch.name
-    @destination_branch = @resp.pullrequest.destination.branch.name
     @repo_name = @resp.repository.name
-    @pr_link = @resp.pullrequest.links.html.href
-    @reason = "."
-    if @resp.reason isnt ''
-      if @resp.pullrequest.reason isnt ''
-        @reason = ":\n\"#{@resp.pullrequest.reason}\""
+
+    if /pullrequest/.test(@type)
+      @title = @resp.pullrequest.title
+      @source_branch = @resp.pullrequest.source.branch.name
+      @destination_branch = @resp.pullrequest.destination.branch.name
+      @link = @resp.pullrequest.links.html.href
+      @reason = "."
+      if @resp.reason isnt ''
+        if @resp.pullrequest.reason isnt ''
+          @reason = ":\n\"#{@resp.pullrequest.reason}\""
+    else
+      @title = @resp.issue.title
+      @link = @resp.issue.links.html.href
+      @type = @resp.issue.type
+      @priority = @resp.issue.priority
+      @state = @resp.issue.state
 
   getReviewers: ->
     if @resp.pullrequest.reviewers.length > 0
       reviewer_names = for reviewer in @resp.pullrequest.reviewers
         "#{reviewer.display_name}"
-      reviewer_names.join(", ")
+      reviewer_names.join(', ')
     else
       'no one in particular'
 
-  branchAction: (action_name, action_desc) ->
+  pullRequestGenericAction: (action_name, action_desc) ->
     "#{@actor} *#{action_name}* pull request \"#{@title},\" #{action_desc}
     `#{@source_branch}` and `#{@destination_branch}` into a `#{@repo_name}`
     super branch#{@reason}"
+
+  issueGenericAction: (action_name, action_desc) ->
+    "#{@actor} #{action_name} issue *#{@title}* for #{@repo_name}#{action_desc}\n#{@link}"
 
   getMessage: ->
     switch
@@ -94,39 +115,57 @@ class PullRequestEvent
         @robot.logger.debug "Pull request unapproved"
         @pullRequestUnapproved()
 
+      # Issue created
+      when @type is 'issue:created' && 'issue_created' in ANNOUNCE_OPTIONS
+        @robot.logger.debug "Issue created"
+        @issueCreated()
+
+      # Issue comment created
+      when @type is 'issue:comment_created' && 'issue_comment_created' in ANNOUNCE_OPTIONS
+        @robot.logger.debug "Issue comment created"
+        @issueCommentCreated()
+
+      # Issue updated
+      when @type is 'issue:updated' && 'issue_updated' in ANNOUNCE_OPTIONS
+        @robot.logger.debug "Issue updated"
+        @issueUpdated()
+
   pullRequestCreated: ->
     "Yo #{@getReviewers()}, #{@actor} just *created* the pull request
     \"#{@title}\" for `#{@source_branch}` on `#{@repo_name}`.
-    \n#{@pr_link}"
+    \n#{@link}"
 
   pullRequestCommentCreated: ->
-    "#{@actor} *added a comment* on `#{@repo_name}`:
+    "#{@actor} *commented on* `#{@repo_name}`:
     \"#{@resp.comment.content.raw}\"\n#{@resp.comment.links.html.href}"
 
   pullRequestDeclined: ->
-    @branchAction('declined', 'thwarting the attempted merge of') + "\n#{@pr_link}"
+    @pullRequestGenericAction('declined', 'thwarting the attempted merge of') + "\n#{@link}"
 
   pullRequestMerged: ->
-    @branchAction('merged', 'joining in sweet harmony')
+    @pullRequestGenericAction('merged', 'joining in sweet harmony')
 
   pullRequestUpdated: ->
-    @branchAction('updated', 'clarifying why it is necessary to merge') + "\n#{@pr_link}"
+    @pullRequestGenericAction('updated', 'clarifying why it is necessary to merge') + "\n#{@link}"
 
   pullRequestApproved: ->
     "A pull request on `#{@repo_name}` has been approved by #{@actor}
-    \n#{encourageMe()}\n#{@pr_link}"
+    \n#{encourageMe()}\n#{@link}"
 
   pullRequestUnapproved: ->
-    "A pull request on `#{@repo_name}` has been unapproved by #{@actor}\n#{@pr_link}"
+    "A pull request on `#{@repo_name}` has been unapproved by #{@actor}\n#{@link}"
+
+  issueCreated: ->
+    @issueGenericAction('created', '')
+
+  issueCommentCreated: ->
+    @issueGenericAction('commented on', ": #{@resp.comment.content}")
+
+  issueUpdated: ->
+    @issueGenericAction('updated', '')
 
 class SlackPullRequestEvent extends PullRequestEvent
-  GREEN: '#48CE78'
-  BLUE: '#286EA6'
-  RED: '#E5283E'
-  PURPLE: '#AA82E5'
-  ORANGE: '#F1A56F'
-
-  branchAction: (action_name, color) ->
+  pullRequestGenericAction: (action_name, color) ->
     content =
       text: "Pull Request #{action_name} by #{@actor}"
       fallback: "#{@actor} *#{action_name}* pull request \"#{@title}\"."
@@ -141,7 +180,7 @@ class SlackPullRequestEvent extends PullRequestEvent
         }
         {
           title: "#{@repo_name} (#{@source_branch})"
-          value: "<#{@pr_link}|View on Bitbucket>"
+          value: "<#{@link}|View on Bitbucket>"
           short: true
         }
       ]
@@ -153,7 +192,7 @@ class SlackPullRequestEvent extends PullRequestEvent
       fallback: "Yo #{reviewers}, #{@actor} just *created* the pull request
                  \"#{@title}\" for `#{@source_branch}` on `#{@repo_name}`."
       pretext: ''
-      color: @BLUE
+      color: COLORS.created
       mrkdwn_in: ["text", "title", "fallback", "fields"]
       fields: [
         {
@@ -163,7 +202,7 @@ class SlackPullRequestEvent extends PullRequestEvent
         }
         {
           title: @repo_name
-          value: "Merge #{@source_branch} to #{@destination_branch}\n<#{@pr_link}|View on Bitbucket>"
+          value: "Merge #{@source_branch} to #{@destination_branch}\n<#{@link}|View on Bitbucket>"
           short: true
         }
       ]
@@ -175,7 +214,7 @@ class SlackPullRequestEvent extends PullRequestEvent
                  \"#{@resp.comment.content.raw}\"
                  \n\n#{@resp.comment.links.html.href}"
       pretext: ''
-      color: @ORANGE
+      color: COLORS.commented
       mrkdwn_in: ["text", "title", "fallback", "fields"]
       fields: [
         {
@@ -191,13 +230,13 @@ class SlackPullRequestEvent extends PullRequestEvent
       ]
 
   pullRequestDeclined: ->
-    @branchAction('Declined', @RED)
+    @pullRequestGenericAction('Declined', COLORS.declined)
 
   pullRequestMerged: ->
-    @branchAction('Merged', @GREEN)
+    @pullRequestGenericAction('Merged', COLORS.merged)
 
   pullRequestUpdated: ->
-    @branchAction('Updated', @PURPLE)
+    @pullRequestGenericAction('Updated', COLORS.updated)
 
   pullRequestApproved: ->
     content =
@@ -205,7 +244,7 @@ class SlackPullRequestEvent extends PullRequestEvent
       fallback: "A pull request on `#{@repo_name}` has been
                  approved by #{@actor}\n#{encourageMe()}"
       pretext: encourageMe()
-      color: @GREEN
+      color: COLORS.approved
       mrkdwn_in: ["text", "title", "fallback", "fields"]
       fields: [
         {
@@ -215,7 +254,7 @@ class SlackPullRequestEvent extends PullRequestEvent
         }
         {
           title: @repo_name
-          value: "<#{@pr_link}|View on Bitbucket>"
+          value: "<#{@link}|View on Bitbucket>"
           short: true
         }
       ]
@@ -226,7 +265,7 @@ class SlackPullRequestEvent extends PullRequestEvent
       fallback: "A pull request on `#{@repo_name}` has been
                  unapproved by #{@actor}"
       pretext: 'Foiled!'
-      color: @RED
+      color: COLORS.unapproved
       mrkdwn_in: ["text", "title", "fallback", "fields"]
       fields: [
         {
@@ -236,7 +275,72 @@ class SlackPullRequestEvent extends PullRequestEvent
         }
         {
           title: @repo_name
-          value: "<#{@pr_link}|View on Bitbucket>"
+          value: "<#{@link}|View on Bitbucket>"
+          short: true
+        }
+      ]
+
+  issueCreated: ->
+    content =
+      text: "New Issue from #{@actor}"
+      fallback: "#{@actor} created an issue *#{@title}* for #{@repo_name}\n#{@link}"
+      pretext: ''
+      color: COLORS.created
+      mrkdwn_in: ["text", "title", "fallback", "fields"]
+      fields: [
+        {
+          title: "#{@title} (#{@type})"
+          value: "#{@priority} priority"
+          short: true
+        }
+        {
+          title: @repo_name
+          value: "<#{@link}|View on Bitbucket>"
+          short: true
+        }
+      ]
+
+  issueCommentCreated: ->
+    content =
+      text: ''
+      fallback: "#{@actor} added a comment to issue *#{@title}* for #{@repo_name}\n#{@link}"
+      pretext: ''
+      color: COLORS.commented
+      mrkdwn_in: ["text", "title", "fallback", "fields"]
+      fields: [
+        {
+          title: "#{@actor} commented"
+          value: @resp.comment.content.raw
+          short: true
+        }
+        {
+          title: "#{@title} (#{@repo_name})"
+          value: "<#{@resp.comment.links.html.href}|Read on Bitbucket>"
+          short: true
+        }
+      ]
+
+  issueChangedFields: ->
+    "*#{field}*: #{change.old} -> #{change.new}" for field, change of @resp.changes
+
+  issueUpdated: ->
+    changed_fields = @issueChangedFields()
+
+    content =
+      text: "Issue updated by #{@actor}"
+      fallback: "#{@actor} updated issue *#{@title}* with the following changes: #{changed_fields.join(', ')} for #{@repo_name}\n#{@link}"
+      pretext: ''
+      color: COLORS.updated
+      mrkdwn_in: ["text", "title", "fallback", "fields"]
+      fields: [
+        {
+          title: "#{@actor} changed"
+          value: changed_fields.join("\n")
+          short: true
+        }
+        {
+          title: "#{@title} (#{@repo_name})"
+          value: "<#{@link}|View on Bitbucket>"
           short: true
         }
       ]

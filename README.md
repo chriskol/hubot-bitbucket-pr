@@ -30,6 +30,16 @@ Set up a Bitbucket Pull Request hook by checking all boxes and setting the URL t
 A default room can be set with `HUBOT_BITBUCKET_PULLREQUEST_ROOM`. If this is not set, a room param is required in the URL:
 `...bitbucket-pr?room={your_room_id}`
 
+**Example**
+
+```bash
+$ heroku config:add HUBOT_BITBUCKET_PULLREQUEST_ROOM=pull-requests
+# Or if you're not on Heroku
+$ export HUBOT_BITBUCKET_PULLREQUEST_ROOM=pull-requests
+```
+
+### Pull Request Configuration
+
 A list of announce events can be set with `HUBOT_BITBUCKET_PULLREQUEST_ANNOUNCE`. This comma-separated list sets what events hubot will share in the designated room. Possible options are:
 
 * created
@@ -42,6 +52,24 @@ A list of announce events can be set with `HUBOT_BITBUCKET_PULLREQUEST_ANNOUNCE`
 
 If left blank, hubot will announce everything.
 
+### Issue Configuration
+
+Issue-specific events can be appended to `HUBOT_BITBUCKET_PULLREQUEST ANNOUNCE`. Possible options are:
+
+* issue_created
+* issue_updated
+* issue_comment_created
+
+Again, if left blank, hubot will announce everything.
+
+**Example**
+
+```bash
+$ heroku config:add HUBOT_BITBUCKET_PULLREQUEST_ANNOUNCE=created,merged,issue_created
+# Or if you're not on Heroku
+$ export HUBOT_BITBUCKET_PULLREQUEST_ANNOUNCE=created,merged,issue_created
+```
+
 ## Commands
 
 This is only a notifier, nothing more.
@@ -49,6 +77,8 @@ This is only a notifier, nothing more.
 ## Notes
 
 `v0.3 >=` required the Pull Request URL be set to `...bitbucket-pr?name={your_repo_name}`. Bitbucket's Webhook 2.0 now includes the repo name in the API response; `v0.4 <=` removes this requirement as a non-breaking change.
+
+Issue support is available in `v1.0 <=`.
 
 ## Testing
 

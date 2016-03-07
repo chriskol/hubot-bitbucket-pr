@@ -162,7 +162,6 @@ describe 'SlackPullRequestEvent', ->
       pre = new SlackPullRequestEvent(MOCK_ROBOT, ISSUE_UPDATED_RESP, 'issue:updated')
       action = pre.issueUpdated()
 
-      expect( action.text ).to.eql 'Issue updated by Emma'
       expect( action.color ).to.eql COLORS.updated
       expect( action.fields[0].title ).to.eql 'Emma changed'
       expect( action.fields[0].value ).to.eql "*status*: open -> on hold"

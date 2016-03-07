@@ -41,6 +41,9 @@ COLORS =
   declined: '#E5283E'
   unapproved: '#E5283E'
 
+issueChangedFields = (changes) ->
+  "*#{field}*: #{change.old} -> #{change.new}" for field, change of changes
+
 class PullRequestEvent
   constructor: (@robot, @resp, @type) ->
     @actor = @resp.actor.display_name
@@ -58,7 +61,7 @@ class PullRequestEvent
     else
       @title = @resp.issue.title
       @link = @resp.issue.links.html.href
-      @type = @resp.issue.type
+      @kind = @resp.issue.kind
       @priority = @resp.issue.priority
       @state = @resp.issue.state
 
@@ -289,8 +292,8 @@ class SlackPullRequestEvent extends PullRequestEvent
       mrkdwn_in: ["text", "title", "fallback", "fields"]
       fields: [
         {
-          title: "#{@title} (#{@type})"
-          value: "#{@priority} priority"
+          title: "#{@title} (#{@kind})"
+          value: "*priority*: #{@priority}"
           short: true
         }
         {
@@ -320,14 +323,11 @@ class SlackPullRequestEvent extends PullRequestEvent
         }
       ]
 
-  issueChangedFields: ->
-    "*#{field}*: #{change.old} -> #{change.new}" for field, change of @resp.changes
-
   issueUpdated: ->
-    changed_fields = @issueChangedFields()
+    changed_fields = issueChangedFields(@resp.changes)
 
     content =
-      text: "Issue updated by #{@actor}"
+      text: ''
       fallback: "#{@actor} updated issue *#{@title}* with the following changes: #{changed_fields.join(', ')} for #{@repo_name}\n#{@link}"
       pretext: ''
       color: COLORS.updated

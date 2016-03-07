@@ -90,7 +90,7 @@ describe 'PullRequestEvent', ->
       expect( pre.link ).to.eql 'https://api.bitbucket.org/issue_id'
       expect( pre.priority ).to.eql 'trivial'
       expect( pre.state ).to.eql 'new'
-      expect( pre.type ).to.eql 'bug'
+      expect( pre.kind ).to.eql 'bug'
 
   describe '#getReviewers()', ->
     it 'should have reviewers', ->

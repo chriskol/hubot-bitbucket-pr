@@ -26,7 +26,8 @@
     },
     "priority" :  "trivial" ,
     "state" :  "new" ,
-    "type" :  "bug" ,
+    "kind" :  "bug" ,
+    "type" : "issue" ,
     "milestone" : {
       "name" :  "milestone 1"
     },

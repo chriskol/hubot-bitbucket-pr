@@ -1,5 +1,5 @@
 # Description:
-#   Holler whenever anything happens around a Bitbucket pull request
+#   Holler whenever anything happens around a Bitbucket Pull Request or Issue
 #
 # Configuration:
 #   Set up a Bitbucket Pull Request hook with the URL

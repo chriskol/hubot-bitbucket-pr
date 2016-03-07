@@ -1,6 +1,6 @@
 # Hubot Bitbucket Pull Request
 
-Holler whenever anything happens around a Bitbucket pull request
+Holler whenever anything happens around a Bitbucket Pull Request or Issue
 
 [![Build Status](https://travis-ci.org/hubot-scripts/hubot-bitbucket-pr.svg)](https://travis-ci.org/hubot-scripts/hubot-bitbucket-pr)
 
@@ -34,7 +34,7 @@ A default room can be set with `HUBOT_BITBUCKET_PULLREQUEST_ROOM`. If this is no
 
 ```bash
 $ heroku config:add HUBOT_BITBUCKET_PULLREQUEST_ROOM=pull-requests
-# Or if you're not on Heroku
+# If you're not on Heroku
 $ export HUBOT_BITBUCKET_PULLREQUEST_ROOM=pull-requests
 ```
 
@@ -66,7 +66,7 @@ Again, if left blank, hubot will announce everything.
 
 ```bash
 $ heroku config:add HUBOT_BITBUCKET_PULLREQUEST_ANNOUNCE=created,merged,issue_created
-# Or if you're not on Heroku
+# If you're not on Heroku
 $ export HUBOT_BITBUCKET_PULLREQUEST_ANNOUNCE=created,merged,issue_created
 ```
 

@@ -366,7 +366,11 @@ module.exports = (robot) ->
           room: room
 
       msg.content = event.getMessage()
-      robot.emit 'slack-attachment', msg
+      
+      payload =
+        attachments: [msg.content]
+        
+      robot.send room: room, payload
 
     # For hubot adapters that are not Slack
     else

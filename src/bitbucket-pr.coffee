@@ -358,15 +358,25 @@ module.exports = (robot) ->
 
     # Slack special formatting
     if robot.adapterName is 'slack'
+      slack_adapter_obj = require('hubot-slack')
       event = new SlackPullRequestEvent(robot, resp, type)
 
       msg =
         message:
           reply_to: room
           room: room
+        content: event.getMessage()
 
-      msg.content = event.getMessage()
-      robot.emit 'slack-attachment', msg
+      # Slack adapter changed how attachments are handled in v4;
+      # this is an ugly hack that checks for the existence
+      # of a depreciated exposed property
+      if slack_adapter_obj.SlackRawMessage?
+        robot.emit 'slack-attachment', msg
+
+      else
+        payload =
+          attachments: [msg.content]
+        robot.send room: room, payload
 
     # For hubot adapters that are not Slack
     else
